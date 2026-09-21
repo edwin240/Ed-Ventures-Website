@@ -1,0 +1,8 @@
+Notes 
+    1) To Start localhost: Open up new terminal and paste 
+cd "C:\Users\Edwin Arevalo\Documents\Code GitHub\Simple site"
+py -m http.server 5500
+
+    2) Manifest image directory AKA .json file
+cd "C:\Users\Edwin Arevalo\Documents\Code GitHub\Simple site"
+py generate-image-manifest.py

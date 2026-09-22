@@ -47,3 +47,5 @@ footer { position:relative; display:grid; grid-template-columns:1.5fr 1fr 1.1fr 
 .gallery-thumbs button { position:relative; }
 .gallery-thumbs button::after { content:""; position:absolute; inset:0; background:transparent; pointer-events:none; transition:background .2s ease; }
 .gallery-thumbs button.active::after { background:rgba(0,0,0,.38); }
+
+.gallery-main { touch-action:pan-y; }

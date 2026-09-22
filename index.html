@@ -8,7 +8,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css" />
+  <script src="version.js"></script>
+  <link rel="stylesheet" id="site-css" />
+  <script>document.getElementById('site-css').href = 'styles.css?v=' + ASSET_VERSION;</script>
 </head>
 <body>
   <header class="site-header">
@@ -23,6 +25,7 @@
     <section class="feature-band" id="photography"><div class="feature-image camera-image" role="img" aria-label="Photographer holding a camera"></div><div class="feature-copy dark-panel reveal"><p class="eyebrow">Photography services</p><div class="price-list"><span>Portraits</span><span>starting at $250</span><span>Branding & Business</span><span>starting at $350</span><span>Events</span><span>starting at $500</span><span>Real Estate</span><span>starting at $200</span><span>Product Photography</span><span>starting at $300</span></div><a class="button button-light" href="#contact">View photography</a></div><div class="feature-image maker-image" role="img" aria-label="Edwin making a wooden table"></div><div class="feature-copy dark-panel reveal" id="about"><p class="eyebrow">About Edwin</p><p>I’m a furniture maker, photographer, and creative entrepreneur based in Maryland.</p><p>I love building things from the ground up and telling stories through both craft and imagery.</p><a class="button button-light" href="#contact">Learn more</a></div></section>
   </main>
   <footer id="contact"><div class="footer-brand"><span>Edwin Arevalo</span><small>Furniture · Photography · Creative Work</small><div class="socials"><a href="#contact" aria-label="Instagram">◎</a><a href="#contact" aria-label="Facebook">f</a><a href="#contact" aria-label="YouTube">▶</a><a href="mailto:hello@edwinarevalo.com" aria-label="Email">✉</a></div></div><div class="footer-links"><strong>Quick Links</strong><a href="#top">Home</a><a href="#furniture">Furniture</a><a href="#photography">Photography</a><a href="#about">Other Work</a><a href="#about">About</a><a href="#contact">Contact</a></div><div class="footer-links"><strong>Contact</strong><a href="tel:+12405551234">(240) 555-1234</a><a href="mailto:hello@edwinarevalo.com">hello@edwinarevalo.com</a><span>Silver Spring, Maryland</span></div><div class="footer-links"><strong>Let’s Work Together</strong><span>Have a project in mind? I’d love to hear about it.</span><a class="button button-light" href="mailto:hello@edwinarevalo.com">Get in touch</a></div><p class="copyright">© 2024 Edwin Arevalo. All rights reserved.</p></footer>
-  <script src="script.js"></script>
+  <script id="site-js"></script>
+  <script>document.getElementById('site-js').src = 'script.js?v=' + ASSET_VERSION;</script>
 </body>
 </html>

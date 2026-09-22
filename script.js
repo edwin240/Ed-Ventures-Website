@@ -240,3 +240,5 @@ if (detailImage) {
   showImage(0);
   })().catch((error) => console.error('Could not load detail gallery:', error));
 }
+
+//ssdds // 

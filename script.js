@@ -246,6 +246,20 @@ if (detailImage) {
   thumbnails.forEach((thumbnail, index) => { const thumb = document.createElement('button'); thumb.type = 'button'; thumb.setAttribute('aria-label', `Show image ${index + 1}`); thumb.innerHTML = `<img src="${thumbnail}" alt="" loading="eager">`; thumb.addEventListener('mouseenter', () => showImage(index)); thumb.addEventListener('focus', () => showImage(index)); thumb.addEventListener('click', () => showImage(index)); thumbsElement.appendChild(thumb); });
   document.querySelector('.gallery-prev').addEventListener('click', () => showImage(currentImage - 1));
   document.querySelector('.gallery-next').addEventListener('click', () => showImage(currentImage + 1));
+  // Swipe horizontally on the main image without hijacking vertical page scrolling.
+  const galleryMain = document.querySelector('.gallery-main');
+  let swipeStartX = 0;
+  let swipeStartY = 0;
+  galleryMain.addEventListener('pointerdown', (event) => {
+    swipeStartX = event.clientX;
+    swipeStartY = event.clientY;
+  });
+  galleryMain.addEventListener('pointerup', (event) => {
+    const deltaX = event.clientX - swipeStartX;
+    const deltaY = event.clientY - swipeStartY;
+    if (Math.abs(deltaX) < 45 || Math.abs(deltaX) <= Math.abs(deltaY)) return;
+    showImage(currentImage + (deltaX < 0 ? 1 : -1));
+  });
   // Turn the mouse wheel into horizontal thumbnail scrolling.
   thumbsElement.addEventListener('wheel', (event) => {
     if (thumbsElement.scrollWidth <= thumbsElement.clientWidth) return;

@@ -2,6 +2,13 @@ from pathlib import Path
 import json
 import re
 
+try:
+    from PIL import Image
+except ImportError as error:
+    raise SystemExit(
+        "Thumbnail generation requires Pillow. Install it with: python -m pip install Pillow"
+    ) from error
+
 CATEGORY_FOLDERS = [
     Path("images/Furniture"),
     Path("images/Photography"),
@@ -24,21 +31,45 @@ for folder in PRODUCT_FOLDERS:
     ]
 
     def is_thumbnail(file):
-        return re.search(r"_Thumbs?-", file.stem) is not None
+        return re.search(r"_Thumbs?-\d+$", file.stem) is not None
 
     def image_number(file):
         match = re.search(r"-(\d+)", file.stem)
         return int(match.group(1)) if match else 0
 
+    def full_image_key(file):
+        match = re.match(r"^(.*)-(\d+)$", file.stem)
+        return (match.group(1), int(match.group(2))) if match else (file.stem, 0)
+
+    def thumbnail_path(file):
+        prefix, number = full_image_key(file)
+        return file.with_name(f"{prefix}_Thumb-{number}.avif")
+
     full_files = [file for file in image_files if not is_thumbnail(file)]
-    full_prefixes = {
-        re.sub(r"-\d+$", "", file.stem)
-        for file in full_files
+    full_image_keys = {full_image_key(file) for file in full_files}
+
+    # Create compact previews only when the matching thumbnail is missing.
+    existing_thumbnail_keys = {
+        (re.sub(r"_Thumbs?-\d+$", "", file.stem), image_number(file))
+        for file in image_files
+        if is_thumbnail(file)
     }
+    for file in full_files:
+        image_key = full_image_key(file)
+        if image_key in existing_thumbnail_keys:
+            continue
+        output_path = thumbnail_path(file)
+        with Image.open(file) as image:
+            image.thumbnail((640, 640), Image.Resampling.LANCZOS)
+            image.convert("RGB").save(output_path, "AVIF", quality=78, speed=6)
+        image_files.append(output_path)
+        existing_thumbnail_keys.add(image_key)
+        print(f"Generated thumbnail {output_path}")
+
     thumbnail_files = [
         file for file in image_files
         if is_thumbnail(file)
-        and re.sub(r"_Thumbs?-\d+$", "", file.stem) in full_prefixes
+        and (re.sub(r"_Thumbs?-\d+$", "", file.stem), image_number(file)) in full_image_keys
     ]
 
     full_images = [

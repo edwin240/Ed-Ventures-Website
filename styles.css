@@ -49,3 +49,6 @@ footer { position:relative; display:grid; grid-template-columns:1.5fr 1fr 1.1fr 
 .gallery-thumbs button.active::after { background:rgba(0,0,0,.38); }
 
 .gallery-main { touch-action:pan-y; }
+
+.gallery-track { display:flex; width:100%; will-change:transform; }
+.gallery-track .gallery-slide { flex:0 0 100%; }

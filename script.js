@@ -226,8 +226,23 @@ if (detailImage) {
   const imageElement = document.querySelector('#detail-image');
   const countElement = document.querySelector('#gallery-count');
   const thumbsElement = document.querySelector('#gallery-thumbs');
+  const syncImageOrientation = () => {
+    const { naturalWidth, naturalHeight } = imageElement;
+    if (!naturalWidth || !naturalHeight) return;
+    const isLandscape = naturalWidth >= naturalHeight;
+    imageElement.classList.toggle('is-landscape', isLandscape);
+    imageElement.classList.toggle('is-portrait', !isLandscape);
+  };
   // Change the main image and keep the active thumbnail in sync.
-  const showImage = (index) => { currentImage = (index + images.length) % images.length; imageElement.src = images[currentImage]; imageElement.alt = `${item[1]} image ${currentImage + 1}`; countElement.textContent = `${currentImage + 1} / ${images.length}`; thumbsElement.querySelectorAll('button').forEach((thumb, thumbIndex) => thumb.classList.toggle('active', thumbIndex === currentImage)); };
+  const showImage = (index) => {
+    currentImage = (index + images.length) % images.length;
+    imageElement.onload = syncImageOrientation;
+    imageElement.src = images[currentImage];
+    imageElement.alt = `${item[1]} image ${currentImage + 1}`;
+    countElement.textContent = `${currentImage + 1} / ${images.length}`;
+    thumbsElement.querySelectorAll('button').forEach((thumb, thumbIndex) => thumb.classList.toggle('active', thumbIndex === currentImage));
+    if (imageElement.complete) syncImageOrientation();
+  };
   thumbnails.forEach((thumbnail, index) => { const thumb = document.createElement('button'); thumb.type = 'button'; thumb.setAttribute('aria-label', `Show image ${index + 1}`); thumb.innerHTML = `<img src="${thumbnail}" alt="" loading="eager">`; thumb.addEventListener('mouseenter', () => showImage(index)); thumb.addEventListener('focus', () => showImage(index)); thumb.addEventListener('click', () => showImage(index)); thumbsElement.appendChild(thumb); });
   document.querySelector('.gallery-prev').addEventListener('click', () => showImage(currentImage - 1));
   document.querySelector('.gallery-next').addEventListener('click', () => showImage(currentImage + 1));
@@ -240,3 +255,5 @@ if (detailImage) {
   showImage(0);
   })().catch((error) => console.error('Could not load detail gallery:', error));
 }
+
+//ssdds //

@@ -160,7 +160,7 @@ if (detailImage) {
       'https://images.unsplash.com/photo-1618220179428-22790b461013?auto=format&fit=crop&w=1400&q=90',
       'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1400&q=90'
     ],
-    // Local products use JSON manifests so image counts update automatically.
+    // FURNITURE..//
     Aneja_Dining_Table: 'images/Furniture/Aneja Dining Table/images.json',
     Aneja_Coffee_Table: 'images/Furniture/Aneja Coffee Table/images.json',
     Poplar_Desk: 'images/Furniture/Poplar Desk/images.json',
@@ -224,42 +224,79 @@ if (detailImage) {
   document.querySelector('#detail-specs').textContent = item[4];
   document.querySelector('#back-link').href = item[0] === 'Furniture' ? 'furniture.html' : item[0] === 'Photography' ? 'photography.html' : 'other-work.html';
   const imageElement = document.querySelector('#detail-image');
+  const galleryTrack = document.querySelector('#gallery-track');
   const countElement = document.querySelector('#gallery-count');
   const thumbsElement = document.querySelector('#gallery-thumbs');
+  const slideElements = images.map((image, index) => {
+    const slide = index === 0 ? imageElement : document.createElement('img');
+    slide.className = 'gallery-slide';
+    slide.src = image;
+    slide.alt = `${item[1]} image ${index + 1}`;
+    slide.loading = index === 0 ? 'eager' : 'lazy';
+    if (index > 0) galleryTrack.appendChild(slide);
+    return slide;
+  });
   const syncImageOrientation = () => {
-    const { naturalWidth, naturalHeight } = imageElement;
+    const activeImage = slideElements[currentImage];
+    const { naturalWidth, naturalHeight } = activeImage;
     if (!naturalWidth || !naturalHeight) return;
     const isLandscape = naturalWidth >= naturalHeight;
-    imageElement.classList.toggle('is-landscape', isLandscape);
-    imageElement.classList.toggle('is-portrait', !isLandscape);
+    activeImage.classList.toggle('is-landscape', isLandscape);
+    activeImage.classList.toggle('is-portrait', !isLandscape);
   };
-  // Change the main image and keep the active thumbnail in sync.
-  const showImage = (index) => {
+  const updateGalleryPosition = (animate = true) => {
+    galleryTrack.style.transition = animate ? 'transform .42s cubic-bezier(.22,.61,.36,1)' : 'none';
+    galleryTrack.style.transform = `translate3d(${-currentImage * 100}%, 0, 0)`;
+  };
+  // Change the active slide and keep the count and thumbnail state in sync.
+  const showImage = (index, animate = true) => {
     currentImage = (index + images.length) % images.length;
-    imageElement.onload = syncImageOrientation;
-    imageElement.src = images[currentImage];
-    imageElement.alt = `${item[1]} image ${currentImage + 1}`;
+    slideElements[currentImage].onload = syncImageOrientation;
     countElement.textContent = `${currentImage + 1} / ${images.length}`;
     thumbsElement.querySelectorAll('button').forEach((thumb, thumbIndex) => thumb.classList.toggle('active', thumbIndex === currentImage));
-    if (imageElement.complete) syncImageOrientation();
+    updateGalleryPosition(animate);
+    if (slideElements[currentImage].complete) syncImageOrientation();
   };
   thumbnails.forEach((thumbnail, index) => { const thumb = document.createElement('button'); thumb.type = 'button'; thumb.setAttribute('aria-label', `Show image ${index + 1}`); thumb.innerHTML = `<img src="${thumbnail}" alt="" loading="eager">`; thumb.addEventListener('mouseenter', () => showImage(index)); thumb.addEventListener('focus', () => showImage(index)); thumb.addEventListener('click', () => showImage(index)); thumbsElement.appendChild(thumb); });
   document.querySelector('.gallery-prev').addEventListener('click', () => showImage(currentImage - 1));
   document.querySelector('.gallery-next').addEventListener('click', () => showImage(currentImage + 1));
-  // Swipe horizontally on the main image without hijacking vertical page scrolling.
+  // Drag the slide track directly, allowing a long swipe to pass multiple images.
   const galleryMain = document.querySelector('.gallery-main');
   let swipeStartX = 0;
   let swipeStartY = 0;
+  let swipeDeltaX = 0;
+  let isDragging = false;
   galleryMain.addEventListener('pointerdown', (event) => {
+    if (!event.isPrimary || event.target.closest('button')) return;
     swipeStartX = event.clientX;
     swipeStartY = event.clientY;
+    swipeDeltaX = 0;
+    isDragging = true;
+    try {
+      galleryMain.setPointerCapture(event.pointerId);
+    } catch (error) {
+      // Some synthetic events do not have an active pointer to capture.
+    }
+    galleryTrack.style.transition = 'none';
   });
-  galleryMain.addEventListener('pointerup', (event) => {
-    const deltaX = event.clientX - swipeStartX;
+  galleryMain.addEventListener('pointermove', (event) => {
+    if (!isDragging) return;
     const deltaY = event.clientY - swipeStartY;
-    if (Math.abs(deltaX) < 45 || Math.abs(deltaX) <= Math.abs(deltaY)) return;
-    showImage(currentImage + (deltaX < 0 ? 1 : -1));
+    swipeDeltaX = event.clientX - swipeStartX;
+    if (Math.abs(swipeDeltaX) <= Math.abs(deltaY)) return;
+    event.preventDefault();
+    const resistance = (currentImage === 0 && swipeDeltaX > 0) || (currentImage === images.length - 1 && swipeDeltaX < 0) ? 0.35 : 1;
+    galleryTrack.style.transform = `translate3d(calc(${-currentImage * 100}% + ${swipeDeltaX * resistance}px), 0, 0)`;
   });
+  const finishSwipe = (event) => {
+    if (!isDragging) return;
+    isDragging = false;
+    if (galleryMain.hasPointerCapture(event.pointerId)) galleryMain.releasePointerCapture(event.pointerId);
+    const skippedImages = Math.abs(swipeDeltaX) < 45 ? 0 : Math.max(1, Math.round(Math.abs(swipeDeltaX) / galleryMain.clientWidth));
+    showImage(currentImage + (swipeDeltaX < 0 ? skippedImages : -skippedImages));
+  };
+  galleryMain.addEventListener('pointerup', finishSwipe);
+  galleryMain.addEventListener('pointercancel', finishSwipe);
   // Turn the mouse wheel into horizontal thumbnail scrolling.
   thumbsElement.addEventListener('wheel', (event) => {
     if (thumbsElement.scrollWidth <= thumbsElement.clientWidth) return;

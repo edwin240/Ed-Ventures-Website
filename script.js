@@ -1,3 +1,7 @@
+// Site-wide behavior for Edwin Arevalo portfolio pages.
+// Sections: navigation · scroll reveal · catalog filters · legacy modal ·
+// product data · featured grid · catalog cards · detail-page gallery
+
 // Mobile navigation menu.
 const menuToggle = document.querySelector('.menu-toggle');
 const navigation = document.querySelector('.main-nav');
@@ -126,7 +130,7 @@ if (featuredGrid) {
   featuredGrid.querySelectorAll('.reveal').forEach((element) => observer.observe(element));
 }
 
-// Populate catalog titles, labels, and prices from the shared item data above.
+// Populate catalog cards from items{} and make the whole card clickable.
 document.querySelectorAll('.catalog-card').forEach((card) => {
   const itemId = card.dataset.item || card.querySelector('a[href*="item="]')?.href.split('item=')[1];
   const item = items[itemId];
@@ -148,12 +152,17 @@ document.querySelectorAll('.catalog-card').forEach((card) => {
   });
 });
 
-// Detail-page gallery. This block only runs when detail.html is open.
+// ---------------------------------------------------------------------------
+// Detail-page gallery (detail.html only)
+// Loads images from images.json manifests or fallback URL arrays, then builds
+// a swipeable carousel with a thumbnail strip below.
+// ---------------------------------------------------------------------------
 const detailImage = document.querySelector('#detail-image');
 
 if (detailImage) {
   (async () => {
-  // Remote fallback galleries remain available for items without local folders.
+  // Maps each product's imageSet key (items[5]) to either a local manifest path
+  // or a hard-coded URL array for products without their own image folder yet.
   const imageSets = {
     furniture: [
       'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&w=1400&q=90',
@@ -197,17 +206,20 @@ if (detailImage) {
       'https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=1400&q=90'
     ]
   };
-  // Read the selected product from detail.html?item=product-slug.
+  // URL param: detail.html?item=product-slug
   const itemId = new URLSearchParams(window.location.search).get('item');
   const item = items[itemId] || items['cherry-dining-table'];
   const imageSetSource = imageSets[item[5]];
-  // A manifest stores filenames relative to its own folder, so add that folder path here.
+
+  // Fetch images.json when the source is a path; otherwise use the URL array directly.
   const imageSet = typeof imageSetSource === 'string'
     ? await fetch(imageSetSource).then((response) => {
       if (!response.ok) throw new Error(`Could not load ${imageSetSource}`);
       return response.json();
     })
     : imageSetSource;
+
+  // Manifests list filenames only — prepend the folder path to build full URLs.
   if (imageSet.full && imageSet.thumbs) {
     const manifestFolder = imageSetSource.substring(0, imageSetSource.lastIndexOf('/') + 1);
     imageSet.full = imageSet.full.map((filename) => `${manifestFolder}${filename}`);
@@ -227,15 +239,50 @@ if (detailImage) {
   const galleryTrack = document.querySelector('#gallery-track');
   const countElement = document.querySelector('#gallery-count');
   const thumbsElement = document.querySelector('#gallery-thumbs');
+  // --- Performance: slide virtualization ---
+  // Only load full-size images for the current slide and its neighbors.
+  // URLs live in data-src until mountSlide sets src, so 15+ photos do not
+  // all download on page load.
+  const LOAD_WINDOW = 1;
+
+  // First N thumbnails load immediately (covers ~one row on desktop);
+  // the rest defer until the browser decides they are near the viewport.
+  const EAGER_THUMBS = 8;
+
+  // Create one <img> per slide in the track. Reuse #detail-image for index 0.
   const slideElements = images.map((image, index) => {
     const slide = index === 0 ? imageElement : document.createElement('img');
     slide.className = 'gallery-slide';
-    slide.src = image;
+    slide.dataset.src = image;
     slide.alt = `${item[1]} image ${index + 1}`;
-    slide.loading = index === 0 ? 'eager' : 'lazy';
     if (index > 0) galleryTrack.appendChild(slide);
     return slide;
   });
+
+  // Assign src from data-src so the browser starts downloading this slide.
+  const mountSlide = (index) => {
+    const slide = slideElements[index];
+    if (!slide.dataset.src || slide.getAttribute('src')) return;
+    slide.src = slide.dataset.src;
+  };
+
+  // Remove src to free memory; skip the slide currently on screen.
+  const unmountSlide = (index) => {
+    if (index === currentImage) return;
+    const slide = slideElements[index];
+    slide.removeAttribute('src');
+    slide.classList.remove('is-landscape', 'is-portrait');
+  };
+
+  // Keep only slides within LOAD_WINDOW of the current index mounted.
+  const syncMountedSlides = () => {
+    images.forEach((_, index) => {
+      if (Math.abs(index - currentImage) <= LOAD_WINDOW) mountSlide(index);
+      else unmountSlide(index);
+    });
+  };
+
+  // Mobile CSS uses is-landscape / is-portrait to pick 5:4 vs 4:5 aspect ratio.
   const syncImageOrientation = () => {
     const activeImage = slideElements[currentImage];
     const { naturalWidth, naturalHeight } = activeImage;
@@ -244,28 +291,56 @@ if (detailImage) {
     activeImage.classList.toggle('is-landscape', isLandscape);
     activeImage.classList.toggle('is-portrait', !isLandscape);
   };
+
+  // Scroll the thumb strip only when the active thumb is off-screen.
+  // "nearest" avoids centering — it nudges just enough to bring it into view.
+  const scrollActiveThumbIntoView = () => {
+    const activeThumb = thumbsElement.querySelector('button.active');
+    if (activeThumb) activeThumb.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  };
+
+  // Move the horizontal track so the current slide fills the viewport.
   const updateGalleryPosition = (animate = true) => {
     galleryTrack.style.transition = animate ? 'transform .42s cubic-bezier(.22,.61,.36,1)' : 'none';
     galleryTrack.style.transform = `translate3d(${-currentImage * 100}%, 0, 0)`;
   };
-  // Change the active slide and keep the count and thumbnail state in sync.
+
+  // Switch to a slide by index; wraps around at the ends.
   const showImage = (index, animate = true) => {
     currentImage = (index + images.length) % images.length;
+    syncMountedSlides();
     slideElements[currentImage].onload = syncImageOrientation;
     countElement.textContent = `${currentImage + 1} / ${images.length}`;
     thumbsElement.querySelectorAll('button').forEach((thumb, thumbIndex) => thumb.classList.toggle('active', thumbIndex === currentImage));
     updateGalleryPosition(animate);
+    scrollActiveThumbIntoView();
     if (slideElements[currentImage].complete) syncImageOrientation();
   };
-  thumbnails.forEach((thumbnail, index) => { const thumb = document.createElement('button'); thumb.type = 'button'; thumb.setAttribute('aria-label', `Show image ${index + 1}`); thumb.innerHTML = `<img src="${thumbnail}" alt="" loading="eager">`; thumb.addEventListener('mouseenter', () => showImage(index)); thumb.addEventListener('focus', () => showImage(index)); thumb.addEventListener('click', () => showImage(index)); thumbsElement.appendChild(thumb); });
+
+  // Build the clickable thumbnail strip below the main image.
+  thumbnails.forEach((thumbnail, index) => {
+    const thumb = document.createElement('button');
+    thumb.type = 'button';
+    thumb.setAttribute('aria-label', `Show image ${index + 1}`);
+    const loading = index < EAGER_THUMBS ? 'eager' : 'lazy';
+    thumb.innerHTML = `<img src="${thumbnail}" alt="" loading="${loading}">`;
+    thumb.addEventListener('mouseenter', () => showImage(index));
+    thumb.addEventListener('focus', () => showImage(index));
+    thumb.addEventListener('click', () => showImage(index));
+    thumbsElement.appendChild(thumb);
+  });
   document.querySelector('.gallery-prev').addEventListener('click', () => showImage(currentImage - 1));
   document.querySelector('.gallery-next').addEventListener('click', () => showImage(currentImage + 1));
-  // Drag the slide track directly, allowing a long swipe to pass multiple images.
+
+  // --- Touch / mouse swipe on the main image ---
+  // Pointer events work for both touch and mouse drag. A long swipe can skip
+  // multiple slides based on how far the finger or cursor moved.
   const galleryMain = document.querySelector('.gallery-main');
   let swipeStartX = 0;
   let swipeStartY = 0;
   let swipeDeltaX = 0;
   let isDragging = false;
+
   galleryMain.addEventListener('pointerdown', (event) => {
     if (!event.isPrimary || event.target.closest('button')) return;
     swipeStartX = event.clientX;
@@ -279,32 +354,38 @@ if (detailImage) {
     }
     galleryTrack.style.transition = 'none';
   });
+
   galleryMain.addEventListener('pointermove', (event) => {
     if (!isDragging) return;
     const deltaY = event.clientY - swipeStartY;
     swipeDeltaX = event.clientX - swipeStartX;
+    // Ignore the gesture if the user is scrolling vertically instead.
     if (Math.abs(swipeDeltaX) <= Math.abs(deltaY)) return;
     event.preventDefault();
+    // Rubber-band effect at the first and last slide.
     const resistance = (currentImage === 0 && swipeDeltaX > 0) || (currentImage === images.length - 1 && swipeDeltaX < 0) ? 0.35 : 1;
     galleryTrack.style.transform = `translate3d(calc(${-currentImage * 100}% + ${swipeDeltaX * resistance}px), 0, 0)`;
   });
+
   const finishSwipe = (event) => {
     if (!isDragging) return;
     isDragging = false;
     if (galleryMain.hasPointerCapture(event.pointerId)) galleryMain.releasePointerCapture(event.pointerId);
+    // Small movement = stay on current slide; large movement = skip one or more.
     const skippedImages = Math.abs(swipeDeltaX) < 45 ? 0 : Math.max(1, Math.round(Math.abs(swipeDeltaX) / galleryMain.clientWidth));
     showImage(currentImage + (swipeDeltaX < 0 ? skippedImages : -skippedImages));
   };
+
   galleryMain.addEventListener('pointerup', finishSwipe);
   galleryMain.addEventListener('pointercancel', finishSwipe);
-  // Turn the mouse wheel into horizontal thumbnail scrolling.
+
+  // Scroll the thumb strip horizontally when using a mouse wheel over it.
   thumbsElement.addEventListener('wheel', (event) => {
     if (thumbsElement.scrollWidth <= thumbsElement.clientWidth) return;
     event.preventDefault();
     thumbsElement.scrollLeft += event.deltaY || event.deltaX;
   }, { passive: false });
+
   showImage(0);
   })().catch((error) => console.error('Could not load detail gallery:', error));
 }
-
-//ssdds //

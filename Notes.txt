@@ -26,8 +26,6 @@ py generate-image-manifest.py
 -Make flyer
 -Buy signs for dads work van
 -Added bulletlist in product descriptions
-*-FAQ page
-
-
+*-FAQ page 
 
 infinity table

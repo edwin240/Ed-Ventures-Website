@@ -308,7 +308,10 @@ const items = {
   //PHOTOGRAPHY LIBRARY//
   'corporate-headshots': ['available', 'Photography', 'Corporate Headshots', 'From $200', '60–90 minute session · 8 edited images', 'Headshots', 'People · Professional', 'Polished, relaxed headshots for teams, founders, and professionals. Includes planning, a focused studio or on-location session, and edited final images.'],
   'engagement-session': ['available', 'Photography', 'Engagement Session', 'From $300', '90 minute session · ~35 edited images', 'Engagement', 'People · Couples', 'A relaxed outdoor session that captures your connection without forcing the moment. We will plan a location and simple visual direction together.'],
-  'birthday-shoot': ['available', 'Photography', 'Birthday Shoot', 'From $300', '90 minute session · 30 edited images', 'people', 'People · Celebration', 'A bright, expressive shoot for birthdays and milestones. Bring your people, your outfit changes, and the energy that makes the day yours.'],
+  'graduation-photoshoot': ['available', 'Photography', 'Graduation Shoot', 'From $250', '90 minute session · 25 edited images', 'Graduation', 'People · Celebration', 'A confident, expressive graduation session that feels like you. We focus on the milestone, your personality, and the photos that will still feel current years from now.'],
+  'birthday-photoshoot': ['available', 'Photography', 'Birthday Shoot', 'From $300', '90 minute session · 30 edited images', 'Birthday', 'People · Celebration', 'A joyful birthday session filled with laughter, movement, and the candid details that make the day feel real. Perfect for kids, teens, or adults wanting a clean, playful portrait set.'],
+  'couples-photoshoot': ['available', 'Photography', 'Couples Shoot', 'From $300', '90 minute session · 30 edited images', 'Couples', 'People · Couples', 'An easygoing couples session focused on genuine connection and natural emotion. We photograph the moments that feel effortless, romantic, and uniquely yours.'],
+
   'branding-business': ['available', 'Photography', 'Branding & Business', 'From $500', '2 hour session · 50 edited images', 'business', 'Business · Storytelling', 'A visual library for your business: portraits, workspace details, products, and the small moments that make your brand feel real.'],
   'product-photography': ['available', 'Photography', 'Product Photography', 'From $300', 'Up to 8 products · 20 edited images', 'business', 'Business · Products', 'Clean, tactile product imagery made for websites, launches, social media, and catalogs. We will shape a shot list around your needs.'],
   'real-estate-story': ['available', 'Photography', 'Real Estate Story', 'From $200', 'Up to 2,000 sq ft · 25 edited images', 'business', 'Business · Spaces', 'Warm, accurate images that help a property feel like a place. Built for listings, rentals, and spaces that deserve attention.'],
@@ -401,6 +404,9 @@ if (detailImage) {
     // PHOTOGRAPHY..//
     Headshots: 'images/Photography/Headshots/images.json',
     Engagement: 'images/Photography/Engagement/images.json',
+    Graduation: 'images/Photography/Graduation/images.json',
+    Birthday: 'images/Photography/Birthday/images.json',
+    Couples: 'images/Photography/Couples/images.json',
 
     // OTHER WORK..// 
     Picnic_Table: 'images/Other Work/Picnic Table/images.json',

@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Get in touch with Edwin Arevalo about furniture, photography, or custom work." />
+  <title>Contact | Edwin Arevalo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+  <script src="version.js"></script>
+  <link rel="stylesheet" id="site-css" />
+  <script>document.getElementById('site-css').href = 'styles.css?v=' + ASSET_VERSION;</script>
+</head>
+<body class="contact-page">
+  <header class="site-header">
+    <a class="brand" href="index.html#top" aria-label="Edwin Arevalo home"><span>Edwin Arevalo</span><small>Furniture · Photography · Creative Work</small></a>
+    <button class="menu-toggle" aria-label="Open navigation" aria-expanded="false">Menu</button>
+    <nav class="main-nav" aria-label="Main navigation">
+      <a href="index.html#top">Home</a>
+      <a href="furniture.html">Furniture</a>
+      <a href="photography.html">Photography</a>
+      <a href="other-work.html">Other Work</a>
+      <a href="index.html#about">About</a>
+      <a class="active" href="contact.html">Contact</a>
+    </nav>
+  </header>
+  <main class="contact-main">
+    <section class="contact-shell">
+      <div class="contact-layout">
+        <figure class="contact-visual">
+          <img id="contact-visual-image" src="images/Furniture/Aneja Dining Table/Aneja_Dining_Table-1.avif" alt="Custom live-edge dining table">
+          <figcaption class="contact-visual-caption" id="contact-visual-caption">Furniture / Commissions &amp; available pieces</figcaption>
+        </figure>
+        <form class="contact-form" id="contact-form" action="https://api.web3forms.com/submit" method="POST" novalidate>
+          <input type="hidden" name="access_key" value="f794c809-c80a-4c20-8220-d9cdeaae482d" />
+          <input type="hidden" name="subject" value="New inquiry from edwinslens.com" />
+          <input type="hidden" name="from_name" value="Edwin Arevalo Website" />
+          <input type="checkbox" name="botcheck" class="contact-botcheck" tabindex="-1" autocomplete="off" aria-hidden="true" />
+          <p class="eyebrow">Contact</p>
+          <h1 class="contact-title">Let&rsquo;s Work Together</h1>
+          <p class="contact-intro">Whether you&rsquo;re interested in furniture, photography, or a creative collaboration &mdash; reach out and tell us about your project.</p>
+          <label class="form-field">
+            <span>What are you interested in?</span>
+            <select name="interest" id="contact-interest" required>
+              <option value="furniture" selected>Furniture</option>
+              <option value="photography">Photography</option>
+              <option value="other">Other</option>
+            </select>
+          </label>
+          <div class="form-row">
+            <label class="form-field">
+              <span>Name <em>*</em></span>
+              <input type="text" name="name" autocomplete="name" placeholder="Your name" required />
+            </label>
+            <label class="form-field">
+              <span>Email <em>*</em></span>
+              <input type="email" name="email" autocomplete="email" placeholder="you@example.com" required />
+            </label>
+          </div>
+          <div class="form-row">
+            <label class="form-field">
+              <span>Phone <small>(optional)</small></span>
+              <input type="tel" name="phone" autocomplete="tel" placeholder="(optional)" />
+            </label>
+            <label class="form-field">
+              <span>Budget range <small>(optional)</small></span>
+              <select name="budget">
+                <option value="" selected>Select a budget</option>
+                <option value="under-1000">Under $1,000</option>
+                <option value="1000-3000">$1,000 &ndash; $3,000</option>
+                <option value="3000-5000">$3,000 &ndash; $5,000</option>
+                <option value="5000-plus">$5,000+</option>
+              </select>
+            </label>
+          </div>
+          <label class="form-field">
+            <span>Desired timeline</span>
+            <input type="text" name="timeline" placeholder="e.g. 1&ndash;3 months or enter a date" />
+          </label>
+          <label class="form-field">
+            <span>Project details <em>*</em></span>
+            <textarea name="message" rows="5" required placeholder="Tell us about your project, dimensions, location, or anything that helps."></textarea>
+          </label>
+          <button class="contact-submit" type="submit">Send inquiry <span>&rarr;</span></button>
+          <p class="form-error" id="contact-form-error" hidden>Something went wrong. Please try again.</p>
+        </form>
+      </div>
+    </section>
+  </main>
+  <div class="contact-modal" id="contact-success-modal" hidden aria-hidden="true">
+    <div class="contact-modal-panel" role="dialog" aria-modal="true" aria-labelledby="contact-modal-title">
+      <button class="contact-modal-close" type="button" aria-label="Close success message">&times;</button>
+      <p class="eyebrow">Thank you</p>
+      <h2 class="contact-modal-title" id="contact-modal-title">Your inquiry was sent.</h2>
+      <p class="contact-modal-lead">We received your message and will review the details you shared.</p>
+      <div class="contact-modal-section">
+        <h3>What happens next</h3>
+        <ol>
+          <li>Gather a few inspiration photos or examples of what you&rsquo;re looking for. You can send those to us later.</li>
+          <li>Expect an email from us. We&rsquo;ll review your project details/timeline and reply via email.</li>
+          <li>If it&rsquo;s a good fit, we schedule a call or in-person meeting to work out the details.</li>
+        </ol>
+      </div>
+      <p class="contact-modal-response"><strong>Average response time:</strong> 1&ndash;3 days.</p>
+      <div class="contact-modal-actions">
+        <a class="button button-dark" href="furniture.html">Furniture <span>&rarr;</span></a>
+        <a class="button button-dark" href="photography.html">Photography <span>&rarr;</span></a>
+        <a class="button button-dark" href="other-work.html">Other work <span>&rarr;</span></a>
+      </div>
+    </div>
+  </div>
+  <footer id="contact"><div class="footer-brand"><span>Edwin Arevalo</span><small>Furniture · Photography · Creative Work</small><div class="socials"><a href="index.html#contact" aria-label="Instagram">◎</a><a href="index.html#contact" aria-label="Facebook">f</a><a href="index.html#contact" aria-label="YouTube">▶</a><a href="contact.html" aria-label="Contact">✉</a></div></div><div class="footer-links"><strong>Explore</strong><a href="index.html#top">Home</a><a href="furniture.html">Furniture</a><a href="photography.html">Photography</a><a href="other-work.html">Other Work</a></div><div class="footer-links"><strong>Location</strong><span>Silver Spring, Maryland</span><span>Inquiries via the contact form.</span></div><div class="footer-links"><strong>Questions?</strong><span>Use the form for commissions, sessions, and project inquiries.</span><a class="button button-light" href="contact.html">Get in touch</a></div><p class="copyright">© 2026 Edwin Arevalo. All rights reserved.</p></footer>
+  <script id="site-js"></script>
+  <script>document.getElementById('site-js').src = 'script.js?v=' + ASSET_VERSION;</script>
+</body>
+</html>

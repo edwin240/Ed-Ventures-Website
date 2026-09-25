@@ -21,16 +21,179 @@ document.querySelectorAll('.main-nav a').forEach((link) => {
 });
 
 // Reveal sections as they enter the viewport.
-const observer = new IntersectionObserver((entries) => {
+// Wait one paint frame before revealing above-the-fold items so the CSS
+// transition always has a hidden starting state (refresh + fast localhost loads).
+let revealsEnabled = false;
+const revealObserver = new IntersectionObserver((entries) => {
+  if (!revealsEnabled) return;
   entries.forEach((entry) => {
-    if (entry.isIntersecting) {
-      entry.target.classList.add('visible');
-      observer.unobserve(entry.target);
-    }
+    if (entry.isIntersecting) revealElement(entry.target);
   });
 }, { threshold: 0.12 });
 
-document.querySelectorAll('.reveal').forEach((element) => observer.observe(element));
+const revealElement = (element) => {
+  if (element.classList.contains('visible')) return;
+  element.classList.add('visible');
+  revealObserver.unobserve(element);
+};
+
+const isInRevealViewport = (element) => {
+  const rect = element.getBoundingClientRect();
+  return rect.top < window.innerHeight * 0.92 && rect.bottom > 0;
+};
+
+const registerRevealElements = (root = document) => {
+  root.querySelectorAll('.reveal:not([data-reveal-tracked])').forEach((element) => {
+    element.dataset.revealTracked = 'true';
+    element.classList.remove('visible');
+    revealObserver.observe(element);
+    if (revealsEnabled && isInRevealViewport(element)) revealElement(element);
+  });
+};
+
+const startRevealAnimations = () => {
+  revealsEnabled = true;
+  document.querySelectorAll('.reveal:not(.visible)').forEach((element) => {
+    if (isInRevealViewport(element)) revealElement(element);
+  });
+};
+
+if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  document.querySelectorAll('.reveal').forEach((element) => element.classList.add('visible'));
+  revealsEnabled = true;
+} else {
+  registerRevealElements();
+  requestAnimationFrame(() => requestAnimationFrame(startRevealAnimations));
+}
+
+// Contact page (contact.html): swap the side image when interest changes.
+const contactForm = document.querySelector('#contact-form');
+const contactInterest = document.querySelector('#contact-interest');
+const contactVisualImage = document.querySelector('#contact-visual-image');
+const contactVisualCaption = document.querySelector('#contact-visual-caption');
+
+if (contactInterest && contactVisualImage && contactVisualCaption) {
+  const contactVisuals = {
+    furniture: {
+      src: 'images/Furniture/Aneja Dining Table/Aneja_Dining_Table-1.avif',
+      alt: 'Custom live-edge dining table',
+      caption: 'Furniture / Commissions & available pieces'
+    },
+    photography: {
+      src: 'images/Photography/Headshots/Headshots-1.avif',
+      alt: 'Professional headshot session',
+      caption: 'Photography / Sessions & brand work'
+    },
+    other: {
+      src: 'images/Other Work/Picnic Table/Picnic_Table-1.avif',
+      alt: 'Handcrafted picnic table',
+      caption: 'Other work / Custom projects'
+    }
+  };
+
+  const updateContactVisual = () => {
+    const visual = contactVisuals[contactInterest.value];
+    if (!visual) return;
+    contactVisualImage.style.opacity = '0';
+    contactVisualImage.onload = () => { contactVisualImage.style.opacity = '1'; };
+    contactVisualImage.src = visual.src;
+    contactVisualImage.alt = visual.alt;
+    contactVisualCaption.textContent = visual.caption;
+    if (contactVisualImage.complete) contactVisualImage.style.opacity = '1';
+  };
+
+  contactInterest.addEventListener('change', updateContactVisual);
+}
+
+if (contactForm) {
+  const contactSubmit = contactForm.querySelector('.contact-submit');
+  const contactError = document.querySelector('#contact-form-error');
+  const contactModal = document.querySelector('#contact-success-modal');
+  const contactModalClose = contactModal?.querySelector('.contact-modal-close');
+  const defaultSubmitLabel = contactSubmit?.innerHTML;
+  const contactModalPanel = contactModal?.querySelector('.contact-modal-panel');
+  let contactSubmitting = false;
+
+  const buildContactFormData = () => {
+    const interest = contactForm.querySelector('[name="interest"]');
+    const interestLabel = interest?.options[interest.selectedIndex]?.text || 'Inquiry';
+    const stamp = new Date().toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit'
+    });
+    const formData = new FormData(contactForm);
+    formData.set('subject', `New ${interestLabel} inquiry — ${stamp}`);
+    formData.set('submission_id', globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`);
+    return formData;
+  };
+
+  const resetContactForm = () => {
+    contactForm.reset();
+    const botcheck = contactForm.querySelector('[name="botcheck"]');
+    if (botcheck) botcheck.checked = false;
+    if (contactInterest) contactInterest.dispatchEvent(new Event('change'));
+  };
+
+  const closeContactModal = () => {
+    if (!contactModal) return;
+    contactModal.hidden = true;
+    contactModal.setAttribute('aria-hidden', 'true');
+    document.removeEventListener('mousedown', handleContactOutsideClick);
+  };
+
+  const handleContactOutsideClick = (event) => {
+    if (!contactModalPanel || contactModal.hidden) return;
+    if (!contactModalPanel.contains(event.target)) closeContactModal();
+  };
+
+  const openContactModal = () => {
+    if (!contactModal) return;
+    contactModal.hidden = false;
+    contactModal.setAttribute('aria-hidden', 'false');
+    document.addEventListener('mousedown', handleContactOutsideClick);
+    contactModalClose?.focus();
+  };
+
+  contactModalClose?.addEventListener('click', closeContactModal);
+
+  contactForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (contactSubmitting || !contactForm.reportValidity()) return;
+
+    contactSubmitting = true;
+    contactError.hidden = true;
+    if (contactSubmit) {
+      contactSubmit.disabled = true;
+      contactSubmit.textContent = 'Sending…';
+    }
+
+    try {
+      const response = await fetch(contactForm.action, {
+        method: 'POST',
+        body: buildContactFormData(),
+        headers: { Accept: 'application/json' },
+        cache: 'no-store'
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || 'Submission failed');
+      }
+      resetContactForm();
+      openContactModal();
+    } catch (error) {
+      contactError.hidden = false;
+    } finally {
+      contactSubmitting = false;
+      if (contactSubmit) {
+        contactSubmit.disabled = false;
+        contactSubmit.innerHTML = defaultSubmitLabel;
+      }
+    }
+  });
+}
 
 // Filter cards on catalog pages by their data-category value.
 const filterButtons = document.querySelectorAll('.filter-button');
@@ -54,7 +217,7 @@ if (detailButtons.length) {
   const modal = document.createElement('div');
   modal.className = 'detail-modal';
   modal.setAttribute('aria-hidden', 'true');
-  modal.innerHTML = '<div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="modal-title"><button class="modal-close" aria-label="Close details">×</button><img class="modal-image" alt=""><div class="modal-copy"><p class="eyebrow">Details</p><h2 id="modal-title"></h2><p class="modal-price"></p><p class="modal-description"></p><p class="modal-specs"></p><a class="button button-dark" href="mailto:hello@edwinarevalo.com">Ask about this</a></div></div>';
+  modal.innerHTML = '<div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="modal-title"><button class="modal-close" aria-label="Close details">×</button><img class="modal-image" alt=""><div class="modal-copy"><p class="eyebrow">Details</p><h2 id="modal-title"></h2><p class="modal-price"></p><p class="modal-description"></p><p class="modal-specs"></p><a class="button button-dark" href="contact.html">Ask about this</a></div></div>';
   document.body.appendChild(modal);
   const closeModal = () => { modal.classList.remove('open'); modal.setAttribute('aria-hidden', 'true'); };
 
@@ -82,11 +245,11 @@ if (detailButtons.length) {
 // [category, title, price, description, dimensionsOrScope, imageSet, catalogLabel]
 const items = {
   //FURNITURE LIBRARY//
-  'cherry-dining-table': ['Furniture', 'River Dining Table', '$14,400', 'A statement dining table shaped from rich cherry with a natural live edge and a dark resin river. Built for long dinners and everyday life.', '72 in L × 36 in W × 30 in H', 'Aneja_Dining_Table', 'Cherry · Dining'],
-  'waterfall-coffee-table': ['Furniture', 'Waterfall Coffee Table', '$3,650', 'A low-profile live edge coffee table that brings the grain and character of the slab into focus. Finished with durable natural oil.', '48 in L × 24 in W × 18 in H', 'Aneja_Coffee_Table', 'Cherry · Living room'],
-  'poplar-desk': ['Furniture', 'Live Edge Computer Desk', '$2,150', 'A quiet, versatile bench with softened edges and a durable finish. Perfect at the foot of a bed, in an entryway, or around a dining table.', '60 in L × 14 in W × 18 in H', 'Poplar_Desk', 'Poplar · Office'],
-  'walnut-computer-desk': ['Furniture', 'Walnut Live Edge Computer Desk', '$3,050', 'A warm, rounded coffee table designed to move easily through a room. The wide top shows off the walnut’s natural movement.', '36 in diameter × 18 in H', 'Walnut_Computer_Desk', 'Walnut · Office'],
-  'infinity-coffee-table': ['Furniture', '"Infinity" Coffee Table', '$3,000', 'A compact solid-oak stool with a sculpted seat and a hand-rubbed finish. A useful small piece with a strong presence.', '18 in W × 18 in D × 20 in H', 'Infinity_Coffee_Table', 'Olivewood · Living Room'],
+  'cherry-dining-table': ['Furniture', 'River Dining Table', '$5,400', 'A statement dining table shaped from rich cherry with a natural live edge and a dark resin river. Built for long dinners and everyday life.', '96 in L × 48 in W × 30 in H', 'Aneja_Dining_Table', 'Cherry · Dining'],
+  'waterfall-coffee-table': ['Furniture', 'Waterfall Coffee Table', '$3,850', 'A low-profile live edge coffee table that brings the grain and character of the slab into focus. Finished with durable natural oil.', '68 in L × 30 in W × 16 in H', 'Aneja_Coffee_Table', 'Cherry · Living room'],
+  'poplar-desk': ['Furniture', 'Live Edge Computer Desk', '$1,950', 'A live-edge poplar computer desk with a black resin river running through the slab. Built for daily work with a durable finish and a surface made to hold up to monitors, books, and everyday use.', '76 in L × 28.5 in W × 26-56 in H', 'Poplar_Desk', 'Poplar · Office'],
+  'walnut-computer-desk': ['Furniture', 'Walnut Live Edge Computer Desk', '$2,150', 'A walnut live-edge computer desk shaped to show the natural movement of the slab. Finished for everyday use with room to work comfortably and display the warmth of the wood.', '68 in L × 26 in W × 26-56 in H', 'Walnut_Computer_Desk', 'Walnut · Office'],
+  'infinity-coffee-table': ['Furniture', '"Infinity" Coffee Table', '$3,000', 'An olivewood coffee table with a sculptural "infinity" form steel base. The flowing silhouette and rich olivewood grain make it a focal point for a living room while staying low and practical for everyday use. The base is made from a single piece of 2 inch square steel that wraps around, connecting where it started to create a infinite loop. Entirely handmade in Rockville, MD this piece is completely original and one-of-one. There will never be another piece like this anywhere in the world.', '48 in L × 29 in W × 16 in H', 'Infinity_Coffee_Table', 'Olivewood · Living Room'],
   'maple-console-table': ['Furniture', 'Maple Console Table', '$1,150', 'A slim console table with a clean silhouette and a broad maple top. Designed for hallways, studios, and thoughtful display.', '54 in L × 14 in W × 30 in H', 'furniture', 'Maple · Entryway'],
   //PHOTOGRAPHY LIBRARY// 
   'corporate-headshots': ['Photography', 'Corporate Headshots', 'From $200', 'Polished, relaxed headshots for teams, founders, and professionals. Includes planning, a focused studio or on-location session, and edited final images.', '60–90 minute session · 8 edited images', 'Headshots', 'People · Professional'],
@@ -102,8 +265,8 @@ const items = {
   'workshop-experience': ['Other Work', 'Workshop Experience', '$175 per person', 'A small-group introduction to making with wood. Guests learn the basics, make a useful object, and leave with something made by hand.', '2.5 hours · Groups of 4–8', 'spaces', 'Spaces · Learning'],
   'collaboration-session': ['Other Work', 'Collaboration Session', 'From $450', 'A focused working session for artists, makers, and entrepreneurs who want a second set of eyes and a thoughtful creative partner.', '3 hour session · Follow-up notes', 'creative', 'Creative · Consulting'],
   // Other Work //
-  'picnic-table': ['Other Work', 'Picnic Table', 'Contact for pricing', 'A handcrafted outdoor table designed for gathering, shared meals, and time spent outside. Contact me for available finishes, dimensions, and delivery details.', 'Custom dimensions available', 'Picnic_Table', 'Outdoor · Furniture'],
-  'red-oak-dresser': ['Other Work', 'Red Oak Dressers', 'Contact for pricing', 'A warm red-oak dresser made to bring practical storage and lasting character to a room. Contact me for dimensions, finish options, and availability.', 'Custom dimensions available', 'Red_Oak_Dresser', 'Red oak · Storage']
+  'picnic-table': ['Other Work', 'Picnic Table', 'Contact for pricing', 'A handcrafted outdoor table designed for gathering, shared meals, and time spent outside. Contact us for available finishes, dimensions, and delivery details.', 'Custom dimensions available', 'Picnic_Table', 'Outdoor · Furniture'],
+  'red-oak-dresser': ['Other Work', 'Red Oak Dressers', 'Contact for pricing', 'A warm red-oak dresser made to bring practical storage and lasting character to a room. Contact us for dimensions, finish options, and availability.', 'Custom dimensions available', 'Red_Oak_Dresser', 'Red oak · Storage']
 };
 
 // Keep previous URLs working after product slugs were renamed.
@@ -127,7 +290,7 @@ if (featuredGrid) {
     if (!item) return '';
     return `<article class="product reveal"><img src="${image}" alt="${alt}"><h3>${item[1]}</h3><p>${item[2]}</p><small>${item[4]}</small><a class="button button-dark" href="detail.html?item=${itemId}">View details</a></article>`;
   }).join('');
-  featuredGrid.querySelectorAll('.reveal').forEach((element) => observer.observe(element));
+  registerRevealElements(featuredGrid);
 }
 
 // Populate catalog cards from items{} and make the whole card clickable.

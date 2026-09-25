@@ -15,13 +15,19 @@ py generate-image-manifest.py
 
 
 9/23/26
--Do form submission with web3forms
+*-Do form submission with web3forms
 -Finish filling in photos for website
 -About me page
 -Upload a new hero photo
--Have is so I can do edwinslens.com/photography instead of photography.html
--Add sold overlay to sold items
+*-Have is so I can do edwinslens.com/photography instead of photography.html
+*-Add sold overlay to sold items
 -Fix product descriptions
 -Add inquiry form popup in detail page. 
+-Make flyer
+-Buy signs for dads work van
+-Added bulletlist in product descriptions
+*-FAQ page
+
+
 
 infinity table

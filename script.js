@@ -195,20 +195,35 @@ if (contactForm) {
   });
 }
 
-// Filter cards on catalog pages by their data-category value.
-const filterButtons = document.querySelectorAll('.filter-button');
+// Filter catalog cards by availability (furniture) or category (photography/other work).
 const catalogCards = document.querySelectorAll('.catalog-card');
+const availabilityFilterButtons = document.querySelectorAll('.filter-button[data-availability]');
+const categoryFilterButtons = document.querySelectorAll('.filter-button[data-filter]');
 
-filterButtons.forEach((button) => {
-  button.addEventListener('click', () => {
-    filterButtons.forEach((item) => item.classList.remove('active'));
-    button.classList.add('active');
-    const filter = button.dataset.filter;
-    catalogCards.forEach((card) => {
-      card.classList.toggle('is-hidden', filter !== 'all' && card.dataset.category !== filter);
+if (availabilityFilterButtons.length) {
+  availabilityFilterButtons.forEach((button) => {
+    button.addEventListener('click', () => {
+      availabilityFilterButtons.forEach((item) => item.classList.remove('active'));
+      button.classList.add('active');
+      const filter = button.dataset.availability;
+      catalogCards.forEach((card) => {
+        const matches = filter === 'all' || card.dataset.availability === filter;
+        card.classList.toggle('is-hidden', !matches);
+      });
     });
   });
-});
+} else if (categoryFilterButtons.length) {
+  categoryFilterButtons.forEach((button) => {
+    button.addEventListener('click', () => {
+      categoryFilterButtons.forEach((item) => item.classList.remove('active'));
+      button.classList.add('active');
+      const filter = button.dataset.filter;
+      catalogCards.forEach((card) => {
+        card.classList.toggle('is-hidden', filter !== 'all' && card.dataset.category !== filter);
+      });
+    });
+  });
+}
 
 // Legacy modal behavior for any older catalog cards that still use details-trigger.
 const detailButtons = document.querySelectorAll('.details-trigger');
@@ -241,32 +256,73 @@ if (detailButtons.length) {
 }
 
 // Shared catalog data.
-// Each item follows this structure:
-// [category, title, price, description, dimensionsOrScope, imageSet, catalogLabel]
+// Each item: [status, category, title, price, dimensionsOrScope, imageSet, catalogLabel, description]
+// status is 'available' or 'sold'
+const ITEM = {
+  STATUS: 0,
+  CATEGORY: 1,
+  TITLE: 2,
+  PRICE: 3,
+  SPECS: 4,
+  IMAGE_SET: 5,
+  LABEL: 6,
+  DESCRIPTION: 7
+};
+const ITEM_STATUS = { SOLD: 'sold', AVAILABLE: 'available' };
+const isSold = (item) => item[ITEM.STATUS] === ITEM_STATUS.SOLD;
+const formatSoldPrice = (price) => `Sold · ${price}`;
+const displayPrice = (item) => (isSold(item) ? formatSoldPrice(item[ITEM.PRICE]) : item[ITEM.PRICE]);
+
+const ensureSoldBadge = (card) => {
+  if (card.querySelector('.sold-badge')) return;
+  const image = card.querySelector('img');
+  if (!image) return;
+  const badge = document.createElement('span');
+  badge.className = 'sold-badge';
+  badge.textContent = 'Sold';
+  badge.hidden = true;
+  image.insertAdjacentElement('afterend', badge);
+};
+
+const applySoldToCatalogCard = (card, item) => {
+  card.dataset.availability = item[ITEM.STATUS];
+  ensureSoldBadge(card);
+  const badge = card.querySelector('.sold-badge');
+  if (isSold(item)) {
+    card.classList.add('is-sold');
+    if (badge) badge.hidden = false;
+  } else {
+    card.classList.remove('is-sold');
+    if (badge) badge.hidden = true;
+  }
+};
+
 const items = {
   //FURNITURE LIBRARY//
-  'cherry-dining-table': ['Furniture', 'River Dining Table', '$5,400', 'A statement dining table shaped from rich cherry with a natural live edge and a dark resin river. Built for long dinners and everyday life.', '96 in L × 48 in W × 30 in H', 'Aneja_Dining_Table', 'Cherry · Dining'],
-  'waterfall-coffee-table': ['Furniture', 'Waterfall Coffee Table', '$3,850', 'A low-profile live edge coffee table that brings the grain and character of the slab into focus. Finished with durable natural oil.', '68 in L × 30 in W × 16 in H', 'Aneja_Coffee_Table', 'Cherry · Living room'],
-  'poplar-desk': ['Furniture', 'Live Edge Computer Desk', '$1,950', 'A live-edge poplar computer desk with a black resin river running through the slab. Built for daily work with a durable finish and a surface made to hold up to monitors, books, and everyday use.', '76 in L × 28.5 in W × 26-56 in H', 'Poplar_Desk', 'Poplar · Office'],
-  'walnut-computer-desk': ['Furniture', 'Walnut Live Edge Computer Desk', '$2,150', 'A walnut live-edge computer desk shaped to show the natural movement of the slab. Finished for everyday use with room to work comfortably and display the warmth of the wood.', '68 in L × 26 in W × 26-56 in H', 'Walnut_Computer_Desk', 'Walnut · Office'],
-  'infinity-coffee-table': ['Furniture', '"Infinity" Coffee Table', '$3,000', 'An olivewood coffee table with a sculptural "infinity" form steel base. The flowing silhouette and rich olivewood grain make it a focal point for a living room while staying low and practical for everyday use. The base is made from a single piece of 2 inch square steel that wraps around, connecting where it started to create a infinite loop. Entirely handmade in Rockville, MD this piece is completely original and one-of-one. There will never be another piece like this anywhere in the world.', '48 in L × 29 in W × 16 in H', 'Infinity_Coffee_Table', 'Olivewood · Living Room'],
-  'maple-console-table': ['Furniture', 'Maple Console Table', '$1,150', 'A slim console table with a clean silhouette and a broad maple top. Designed for hallways, studios, and thoughtful display.', '54 in L × 14 in W × 30 in H', 'furniture', 'Maple · Entryway'],
-  //PHOTOGRAPHY LIBRARY// 
-  'corporate-headshots': ['Photography', 'Corporate Headshots', 'From $200', 'Polished, relaxed headshots for teams, founders, and professionals. Includes planning, a focused studio or on-location session, and edited final images.', '60–90 minute session · 8 edited images', 'Headshots', 'People · Professional'],
-  'engagement-session': ['Photography', 'Engagement Session', 'From $300', 'A relaxed outdoor session that captures your connection without forcing the moment. We will plan a location and simple visual direction together.', '90 minute session · ~35 edited images', 'Engagement', 'People · Couples'],
-  'birthday-shoot': ['Photography', 'Birthday Shoot', 'From $300', 'A bright, expressive shoot for birthdays and milestones. Bring your people, your outfit changes, and the energy that makes the day yours.', '90 minute session · 30 edited images', 'people', 'People · Celebration'],
-  'branding-business': ['Photography', 'Branding & Business', 'From $500', 'A visual library for your business: portraits, workspace details, products, and the small moments that make your brand feel real.', '2 hour session · 50 edited images', 'business', 'Business · Storytelling'],
-  'product-photography': ['Photography', 'Product Photography', 'From $300', 'Clean, tactile product imagery made for websites, launches, social media, and catalogs. We will shape a shot list around your needs.', 'Up to 8 products · 20 edited images', 'business', 'Business · Products'],
-  'real-estate-story': ['Photography', 'Real Estate Story', 'From $200', 'Warm, accurate images that help a property feel like a place. Built for listings, rentals, and spaces that deserve attention.', 'Up to 2,000 sq ft · 25 edited images', 'business', 'Business · Spaces'],
-  'creative-direction': ['Other Work', 'Creative Direction', 'From $750', 'Shape the visual direction of a launch, campaign, or personal project. Includes concept development, references, and a practical creative plan.', 'Half-day direction · Concept deck · One revision', 'creative', 'Creative · Strategy'],
-  'custom-art-piece': ['Other Work', 'Custom Art Piece', 'From $600', 'A one-off handmade object built around your space, story, or idea. We will develop the material, scale, and finish together.', 'Custom scope · 4–8 week lead time', 'creative', 'Creative · Object'],
-  'space-styling': ['Other Work', 'Space Styling', 'From $900', 'Thoughtful styling for a room, studio, or small commercial space. We focus on materials, placement, light, and the feeling people take away.', 'One room · Styling plan · Sourcing list', 'spaces', 'Spaces · Interiors'],
-  'brand-story-package': ['Other Work', 'Brand Story Package', 'From $1,200', 'A compact visual story for an emerging brand, combining creative direction, photography, and a set of launch-ready assets.', 'Strategy call · Shoot day · 40 edited assets', 'creative', 'Creative · Brand'],
-  'workshop-experience': ['Other Work', 'Workshop Experience', '$175 per person', 'A small-group introduction to making with wood. Guests learn the basics, make a useful object, and leave with something made by hand.', '2.5 hours · Groups of 4–8', 'spaces', 'Spaces · Learning'],
-  'collaboration-session': ['Other Work', 'Collaboration Session', 'From $450', 'A focused working session for artists, makers, and entrepreneurs who want a second set of eyes and a thoughtful creative partner.', '3 hour session · Follow-up notes', 'creative', 'Creative · Consulting'],
+  'cherry-dining-table': ['sold', 'Furniture', '8ft River Dining Table', '$5,400', '96 in L × 48 in W × 30 in H', 'Aneja_Dining_Table', 'Black Cherry · Dining', 'A statement dining table shaped from rich cherry with a natural live edge and a dark resin river. Built for long dinners and everyday life.'],
+  'waterfall-coffee-table': ['sold', 'Furniture', 'XL Waterfall Coffee Table', '$3,850', '68 in L × 30 in W × 16 in H', 'Aneja_Coffee_Table', 'Black Cherry · Living room', 'A low-profile live edge coffee table that brings the grain and character of the slab into focus. Finished with durable natural oil.'],
+  'poplar-desk': ['sold', 'Furniture', 'Adjustable Live Edge Computer Desk', '$1,950', '76 in L × 28.5 in W × 26-56 in H', 'Poplar_Desk', 'Poplar · Office', 'A live-edge adjustable height poplar computer desk with a black resin river running through the slab. Built for daily work with a durable finish and a surface made to hold up to monitors, books, and everyday use. Features adjustable height with dual motor legs that can withstand up to 500lbs'],
+  'walnut-computer-desk': ['sold', 'Furniture', 'Walnut Live Edge Computer Desk', '$2,150', '68 in L × 26 in W × 26-56 in H', 'Walnut_Computer_Desk', 'Walnut · Office', 'A walnut live-edge computer desk shaped to show the natural movement of the slab. Finished for everyday use with room to work comfortably and display the warmth of the wood.'],
+  'infinity-coffee-table': ['available', 'Furniture', '"Infinity" Coffee Table', '$3,000', '48 in L × 29 in W × 16 in H', 'Infinity_Coffee_Table', 'Olivewood · Living Room', 'An olivewood coffee table with a sculptural "infinity" form steel base. The flowing silhouette and rich olivewood grain make it a focal point for a living room while staying low and practical for everyday use. The base is made from a single piece of 2 inch square steel that wraps around, connecting where it started to create a infinite loop. Entirely handmade in Rockville, MD this piece is completely original and one-of-one. There will never be another piece like this anywhere in the world.'],
+  'maple-console-table': ['available', 'Furniture', 'Maple Console Table', '$1,150', '54 in L × 14 in W × 30 in H', 'furniture', 'Maple · Entryway', 'A slim console table with a clean silhouette and a broad maple top. Designed for hallways, studios, and thoughtful display.'],
+  //PHOTOGRAPHY LIBRARY//
+  'corporate-headshots': ['available', 'Photography', 'Corporate Headshots', 'From $200', '60–90 minute session · 8 edited images', 'Headshots', 'People · Professional', 'Polished, relaxed headshots for teams, founders, and professionals. Includes planning, a focused studio or on-location session, and edited final images.'],
+  'engagement-session': ['available', 'Photography', 'Engagement Session', 'From $300', '90 minute session · ~35 edited images', 'Engagement', 'People · Couples', 'A relaxed outdoor session that captures your connection without forcing the moment. We will plan a location and simple visual direction together.'],
+  'birthday-shoot': ['available', 'Photography', 'Birthday Shoot', 'From $300', '90 minute session · 30 edited images', 'people', 'People · Celebration', 'A bright, expressive shoot for birthdays and milestones. Bring your people, your outfit changes, and the energy that makes the day yours.'],
+  'branding-business': ['available', 'Photography', 'Branding & Business', 'From $500', '2 hour session · 50 edited images', 'business', 'Business · Storytelling', 'A visual library for your business: portraits, workspace details, products, and the small moments that make your brand feel real.'],
+  'product-photography': ['available', 'Photography', 'Product Photography', 'From $300', 'Up to 8 products · 20 edited images', 'business', 'Business · Products', 'Clean, tactile product imagery made for websites, launches, social media, and catalogs. We will shape a shot list around your needs.'],
+  'real-estate-story': ['available', 'Photography', 'Real Estate Story', 'From $200', 'Up to 2,000 sq ft · 25 edited images', 'business', 'Business · Spaces', 'Warm, accurate images that help a property feel like a place. Built for listings, rentals, and spaces that deserve attention.'],
+  'creative-direction': ['available', 'Other Work', 'Creative Direction', 'From $750', 'Half-day direction · Concept deck · One revision', 'creative', 'Creative · Strategy', 'Shape the visual direction of a launch, campaign, or personal project. Includes concept development, references, and a practical creative plan.'],
+  'custom-art-piece': ['available', 'Other Work', 'Custom Art Piece', 'From $600', 'Custom scope · 4–8 week lead time', 'creative', 'Creative · Object', 'A one-off handmade object built around your space, story, or idea. We will develop the material, scale, and finish together.'],
+  'space-styling': ['available', 'Other Work', 'Space Styling', 'From $900', 'One room · Styling plan · Sourcing list', 'spaces', 'Spaces · Interiors', 'Thoughtful styling for a room, studio, or small commercial space. We focus on materials, placement, light, and the feeling people take away.'],
+  'brand-story-package': ['available', 'Other Work', 'Brand Story Package', 'From $1,200', 'Strategy call · Shoot day · 40 edited assets', 'creative', 'Creative · Brand', 'A compact visual story for an emerging brand, combining creative direction, photography, and a set of launch-ready assets.'],
+  'workshop-experience': ['available', 'Other Work', 'Workshop Experience', '$175 per person', '2.5 hours · Groups of 4–8', 'spaces', 'Spaces · Learning', 'A small-group introduction to making with wood. Guests learn the basics, make a useful object, and leave with something made by hand.'],
+  'collaboration-session': ['available', 'Other Work', 'Collaboration Session', 'From $450', '3 hour session · Follow-up notes', 'creative', 'Creative · Consulting', 'A focused working session for artists, makers, and entrepreneurs who want a second set of eyes and a thoughtful creative partner.'],
   // Other Work //
-  'picnic-table': ['Other Work', 'Picnic Table', 'Contact for pricing', 'A handcrafted outdoor table designed for gathering, shared meals, and time spent outside. Contact us for available finishes, dimensions, and delivery details.', 'Custom dimensions available', 'Picnic_Table', 'Outdoor · Furniture'],
-  'red-oak-dresser': ['Other Work', 'Red Oak Dressers', 'Contact for pricing', 'A warm red-oak dresser made to bring practical storage and lasting character to a room. Contact us for dimensions, finish options, and availability.', 'Custom dimensions available', 'Red_Oak_Dresser', 'Red oak · Storage']
+  'picnic-table': ['sold', 'Other Work', 'Picnic Table', '$800', '', 'Picnic_Table', 'Outdoor · Furniture', 'A handcrafted outdoor table designed for gathering, shared meals, and time spent outside. Contact us for available finishes, dimensions, and delivery details.'],
+  'red-oak-dresser': ['sold', 'Other Work', 'Red Oak 2 Piece Dresser Set', '$1,500', '', 'Red_Oak_Dresser', 'Red oak · Storage', 'A warm red-oak dresser made to bring practical storage and lasting character to a room. Contact us for dimensions, finish options, and availability.'],
+  //'picnic-table': ['sold', 'Other Work', 'Picnic Table', '$800', 'Custom dimensions available', 'Picnic_Table', 'Outdoor · Furniture', 'A handcrafted outdoor table designed for gathering, shared meals, and time spent outside. Contact us for available finishes, dimensions, and delivery details.']
+
 };
 
 // Keep previous URLs working after product slugs were renamed.
@@ -288,7 +344,9 @@ if (featuredGrid) {
   featuredGrid.innerHTML = featuredFurniture.map(({ itemId, image, alt }) => {
     const item = items[itemId];
     if (!item) return '';
-    return `<article class="product reveal"><img src="${image}" alt="${alt}"><h3>${item[1]}</h3><p>${item[2]}</p><small>${item[4]}</small><a class="button button-dark" href="detail.html?item=${itemId}">View details</a></article>`;
+    const soldClass = isSold(item) ? ' is-sold' : '';
+    const badge = isSold(item) ? '<span class="sold-badge">Sold</span>' : '';
+    return `<article class="product reveal${soldClass}"><div class="product-media"><a class="product-image-link" href="detail.html?item=${itemId}" aria-label="View ${item[ITEM.TITLE]}"><img src="${image}" alt="${alt}">${badge}</a></div><h3>${item[ITEM.TITLE]}</h3><p>${displayPrice(item)}</p><small>${item[ITEM.SPECS]}</small><a class="button button-dark" href="detail.html?item=${itemId}">View details</a></article>`;
   }).join('');
   registerRevealElements(featuredGrid);
 }
@@ -298,9 +356,10 @@ document.querySelectorAll('.catalog-card').forEach((card) => {
   const itemId = card.dataset.item || card.querySelector('a[href*="item="]')?.href.split('item=')[1];
   const item = items[itemId];
   if (!item) return;
-  card.querySelector('h3').textContent = item[1];
-  card.querySelector('.card-info p').textContent = item[6] || item[0];
-  card.querySelector('.card-info strong').textContent = item[2];
+  card.querySelector('h3').textContent = item[ITEM.TITLE];
+  card.querySelector('.card-info p').textContent = item[ITEM.LABEL] || item[ITEM.CATEGORY];
+  card.querySelector('.card-info strong').textContent = displayPrice(item);
+  applySoldToCatalogCard(card, item);
   const detailLink = card.querySelector('a[href*="item="]');
   card.setAttribute('tabindex', '0');
   card.setAttribute('role', 'link');
@@ -324,7 +383,7 @@ const detailImage = document.querySelector('#detail-image');
 
 if (detailImage) {
   (async () => {
-  // Maps each product's imageSet key (items[5]) to either a local manifest path
+  // Maps each product's imageSet key (item[ITEM.IMAGE_SET]) to either a local manifest path
   // or a hard-coded URL array for products without their own image folder yet.
   const imageSets = {
     furniture: [
@@ -372,7 +431,7 @@ if (detailImage) {
   // URL param: detail.html?item=product-slug
   const itemId = new URLSearchParams(window.location.search).get('item');
   const item = items[itemId] || items['cherry-dining-table'];
-  const imageSetSource = imageSets[item[5]];
+  const imageSetSource = imageSets[item[ITEM.IMAGE_SET]];
 
   // Fetch images.json when the source is a path; otherwise use the URL array directly.
   const imageSet = typeof imageSetSource === 'string'
@@ -391,13 +450,33 @@ if (detailImage) {
   const images = Array.isArray(imageSet) ? imageSet : imageSet.full;
   const thumbnails = Array.isArray(imageSet) ? imageSet : imageSet.thumbs;
   let currentImage = 0;
-  document.title = `${item[1]} | Edwin Arevalo`;
-  document.querySelector('#detail-kicker').textContent = item[0];
-  document.querySelector('#detail-title').textContent = item[1];
-  document.querySelector('#detail-price').textContent = item[2];
-  document.querySelector('#detail-description').textContent = item[3];
-  document.querySelector('#detail-specs').textContent = item[4];
-  document.querySelector('#back-link').href = item[0] === 'Furniture' ? 'furniture.html' : item[0] === 'Photography' ? 'photography.html' : 'other-work.html';
+  document.title = `${item[ITEM.TITLE]} | Edwin Arevalo`;
+  document.querySelector('#detail-kicker').textContent = item[ITEM.CATEGORY];
+  document.querySelector('#detail-title').textContent = item[ITEM.TITLE];
+  document.querySelector('#detail-price').textContent = displayPrice(item);
+  document.querySelector('#detail-description').textContent = item[ITEM.DESCRIPTION];
+  document.querySelector('#detail-specs').textContent = item[ITEM.SPECS];
+  document.querySelector('#back-link').href = item[ITEM.CATEGORY] === 'Furniture' ? 'furniture.html' : item[ITEM.CATEGORY] === 'Photography' ? 'photography.html' : 'other-work.html';
+
+  const inquiryButton = document.querySelector('.inquiry-button');
+  const detailNote = document.querySelector('.detail-note');
+  const galleryMain = document.querySelector('.gallery-main');
+  if (isSold(item)) {
+    document.body.classList.add('detail-sold');
+    if (inquiryButton) {
+      inquiryButton.textContent = 'Request something similar';
+      inquiryButton.href = 'contact.html';
+    }
+    if (detailNote) {
+      detailNote.textContent = 'This piece has sold. We can discuss a similar commission via the contact form.';
+    }
+    if (galleryMain && !galleryMain.querySelector('.sold-badge')) {
+      const galleryBadge = document.createElement('span');
+      galleryBadge.className = 'sold-badge sold-badge-gallery';
+      galleryBadge.textContent = 'Sold';
+      galleryMain.append(galleryBadge);
+    }
+  }
   const imageElement = document.querySelector('#detail-image');
   const galleryTrack = document.querySelector('#gallery-track');
   const countElement = document.querySelector('#gallery-count');
@@ -417,7 +496,7 @@ if (detailImage) {
     const slide = index === 0 ? imageElement : document.createElement('img');
     slide.className = 'gallery-slide';
     slide.dataset.src = image;
-    slide.alt = `${item[1]} image ${index + 1}`;
+    slide.alt = `${item[ITEM.TITLE]} image ${index + 1}`;
     if (index > 0) galleryTrack.appendChild(slide);
     return slide;
   });
@@ -498,7 +577,6 @@ if (detailImage) {
   // --- Touch / mouse swipe on the main image ---
   // Pointer events work for both touch and mouse drag. A long swipe can skip
   // multiple slides based on how far the finger or cursor moved.
-  const galleryMain = document.querySelector('.gallery-main');
   let swipeStartX = 0;
   let swipeStartY = 0;
   let swipeDeltaX = 0;

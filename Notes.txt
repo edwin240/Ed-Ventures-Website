@@ -22,12 +22,10 @@ py generate-image-manifest.py
 *-Have is so I can do edwinslens.com/photography instead of photography.html
 *-Add sold overlay to sold items
 *-Fix product descriptions
--Add inquiry form popup in detail page. 
--Make flyer
+-Add inquiry form popup in detail page to link item to inquiry 
+*-Make flyer
 -Buy signs for dads work van
 -Added bulletlist in product descriptions
 *-FAQ page 
 -Link my facebook account for the reviews
-
-
-infinity table
+-Sim Aneja new invoice

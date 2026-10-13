@@ -270,7 +270,7 @@ const ITEM = {
 };
 const ITEM_STATUS = { SOLD: 'sold', AVAILABLE: 'available' };
 const isSold = (item) => item[ITEM.STATUS] === ITEM_STATUS.SOLD;
-const formatSoldPrice = (price) => `Sold · ${price}`;
+const formatSoldPrice = (price) => (price ? `Sold · ${price}` : 'Sold');
 const displayPrice = (item) => (isSold(item) ? formatSoldPrice(item[ITEM.PRICE]) : item[ITEM.PRICE]);
 
 const ensureSoldBadge = (card) => {
@@ -303,7 +303,7 @@ const items = {
   'waterfall-coffee-table': ['sold', 'Furniture', 'XL Waterfall Coffee Table', '$3,850', '68 in L × 30 in W × 16 in H', 'Aneja_Coffee_Table', 'Black Cherry · Living room', 'A low-profile live edge coffee table that brings the grain and character of the slab into focus. Finished with durable natural oil.'],
   'poplar-desk': ['sold', 'Furniture', 'Adjustable Live Edge Computer Desk', '$1,950', '76 in L × 28.5 in W × 26-56 in H', 'Poplar_Desk', 'Poplar · Office', 'A live-edge adjustable height poplar computer desk with a black resin river running through the slab. Built for daily work with a durable finish and a surface made to hold up to monitors, books, and everyday use. Features adjustable height with dual motor legs that can withstand up to 500lbs'],
   'walnut-computer-desk': ['sold', 'Furniture', 'Walnut Live Edge Computer Desk', '$2,150', '68 in L × 26 in W × 26-56 in H', 'Walnut_Computer_Desk', 'Walnut · Office', 'A walnut live-edge computer desk shaped to show the natural movement of the slab. Finished for everyday use with room to work comfortably and display the warmth of the wood.'],
-  'infinity-coffee-table': ['available', 'Furniture', '"Infinity" Coffee Table', '$3,000', '48 in L × 29 in W × 16 in H', 'Infinity_Coffee_Table', 'Olivewood · Living Room', 'An olivewood coffee table with a sculptural "infinity" form steel base. The flowing silhouette and rich olivewood grain make it a focal point for a living room while staying low and practical for everyday use. The base is made from a single piece of 2 inch square steel that wraps around, connecting where it started to create a infinite loop. Entirely handmade in Rockville, MD this piece is completely original and one-of-one. There will never be another piece like this anywhere in the world.'],
+  'infinity-coffee-table': ['available', 'Furniture', '"Infinity" Coffee Table', '$2,000', '48 in L × 29 in W × 16 in H', 'Infinity_Coffee_Table', 'Olivewood · Living Room', 'An olivewood coffee table with a sculptural "infinity" form steel base. The flowing silhouette and rich olivewood grain make it a focal point for a living room while staying low and practical for everyday use. The base is made from a single piece of 2 inch square steel that wraps around, connecting where it started to create a infinite loop. Entirely handmade in Rockville, MD this piece is completely original and one-of-one. There will never be another piece like this anywhere in the world.'],
   'maple-console-table': ['available', 'Furniture', 'Maple Console Table', '$1,150', '54 in L × 14 in W × 30 in H', 'furniture', 'Maple · Entryway', 'A slim console table with a clean silhouette and a broad maple top. Designed for hallways, studios, and thoughtful display.'],
   //PHOTOGRAPHY LIBRARY//
   'corporate-headshots': ['available', 'Photography', 'Corporate Headshots', 'From $200', '60–90 minute session · 8 edited images', 'Headshots', 'People · Professional', 'Polished, relaxed headshots for teams, founders, and professionals. Includes planning, a focused studio or on-location session, and edited final images.'],
@@ -324,6 +324,7 @@ const items = {
   // Other Work //
   'picnic-table': ['sold', 'Other Work', 'Picnic Table', '$800', '', 'Picnic_Table', 'Outdoor · Furniture', 'A handcrafted outdoor table designed for gathering, shared meals, and time spent outside. Contact us for available finishes, dimensions, and delivery details.'],
   'red-oak-dresser': ['sold', 'Other Work', 'Red Oak 2 Piece Dresser Set', '$1,500', '', 'Red_Oak_Dresser', 'Red oak · Storage', 'A warm red-oak dresser made to bring practical storage and lasting character to a room. Contact us for dimensions, finish options, and availability.'],
+  'cutting-boards': ['sold', 'Other Work', 'Handcrafted Cutting Board', '', '', 'Cutting_Boards', 'Kitchen · Cutting boards', 'A handcrafted cutting board made for everyday prep and serving. Its natural wood grain brings warmth to the kitchen and moves easily from worktop to table. This piece has sold; contact us to discuss a similar custom board.'],
   //'picnic-table': ['sold', 'Other Work', 'Picnic Table', '$800', 'Custom dimensions available', 'Picnic_Table', 'Outdoor · Furniture', 'A handcrafted outdoor table designed for gathering, shared meals, and time spent outside. Contact us for available finishes, dimensions, and delivery details.']
 
 };
@@ -411,6 +412,7 @@ if (detailImage) {
     // OTHER WORK..// 
     Picnic_Table: 'images/Other Work/Picnic Table/images.json',
     Red_Oak_Dresser: 'images/Other Work/Red Oak Dresser/images.json',
+    Cutting_Boards: 'images/Other Work/Cutting Boards/images.json',
 
 
     people: [

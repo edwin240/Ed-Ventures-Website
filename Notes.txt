@@ -29,3 +29,10 @@ py generate-image-manifest.py
 *-FAQ page 
 -Link my facebook account for the reviews
 -Sim Aneja new invoice
+
+10/13/26
+- sim invoice   
+- 9ft table invoice
+- minor fixes to website
+- van side magnets
+- raspberry pi home server

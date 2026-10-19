@@ -2,6 +2,106 @@
 // Sections: navigation · scroll reveal · catalog filters · legacy modal ·
 // product data · featured grid · catalog cards · detail-page gallery
 
+// Respect the visitor's browser-specific analytics preference before loading GA4.
+const ANALYTICS_PREFERENCE_KEY = 'analytics-preference';
+const hasAnalyticsId = /^G-[A-Z0-9]+$/.test(GOOGLE_ANALYTICS_ID);
+const googleAnalyticsConfig = {
+  allow_google_signals: false,
+  allow_ad_personalization_signals: false
+};
+const readAnalyticsPreference = () => {
+  try {
+    return localStorage.getItem(ANALYTICS_PREFERENCE_KEY) === 'off';
+  } catch {
+    return false;
+  }
+};
+let analyticsDisabled = readAnalyticsPreference();
+
+const clearAnalyticsCookies = () => {
+  const cookieNames = document.cookie.split(';').map((cookie) => cookie.trim().split('=')[0]);
+  const analyticsCookies = cookieNames.filter((name) => name === '_ga' || name.startsWith('_ga_'));
+  const hostParts = window.location.hostname.split('.');
+  const domains = [''];
+  for (let index = 0; index < hostParts.length - 1; index += 1) {
+    domains.push(`; domain=.${hostParts.slice(index).join('.')}`);
+  }
+  analyticsCookies.forEach((name) => {
+    domains.forEach((domain) => {
+      document.cookie = `${name}=; Max-Age=0; path=/; SameSite=Lax${domain}`;
+    });
+  });
+};
+
+const loadGoogleAnalytics = () => {
+  if (!hasAnalyticsId || analyticsDisabled) return;
+  window[`ga-disable-${GOOGLE_ANALYTICS_ID}`] = false;
+  const existingTag = document.querySelector(`script[src*="googletagmanager.com/gtag/js?id=${GOOGLE_ANALYTICS_ID}"]`);
+  if (existingTag) {
+    window.gtag?.('config', GOOGLE_ANALYTICS_ID, googleAnalyticsConfig);
+    return;
+  }
+  window.dataLayer = window.dataLayer || [];
+  window.gtag = function () { window.dataLayer.push(arguments); };
+  window.gtag('js', new Date());
+  window.gtag('config', GOOGLE_ANALYTICS_ID, googleAnalyticsConfig);
+  const analyticsScript = document.createElement('script');
+  analyticsScript.async = true;
+  analyticsScript.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(GOOGLE_ANALYTICS_ID)}`;
+  document.head.appendChild(analyticsScript);
+};
+
+const trackAnalyticsEvent = (eventName, eventParameters = {}) => {
+  if (!hasAnalyticsId || analyticsDisabled || typeof window.gtag !== 'function') return;
+  window.gtag('event', eventName, eventParameters);
+};
+
+if (hasAnalyticsId) {
+  window[`ga-disable-${GOOGLE_ANALYTICS_ID}`] = analyticsDisabled;
+  loadGoogleAnalytics();
+}
+
+const analyticsOptOutButton = document.querySelector('#analytics-opt-out');
+const analyticsOptInButton = document.querySelector('#analytics-opt-in');
+const analyticsPreferenceStatus = document.querySelector('#analytics-preference-status');
+
+if (analyticsOptOutButton && analyticsOptInButton && analyticsPreferenceStatus) {
+  const updateAnalyticsPreferenceStatus = (storageAvailable = true) => {
+    analyticsPreferenceStatus.textContent = analyticsDisabled
+      ? `Analytics is off${storageAvailable ? ' for this browser' : ' for this page; browser storage is unavailable, so this choice may not persist'}.`
+      : 'Analytics is on for this browser.';
+    analyticsOptOutButton.setAttribute('aria-pressed', String(analyticsDisabled));
+    analyticsOptInButton.setAttribute('aria-pressed', String(!analyticsDisabled));
+  };
+
+  analyticsOptOutButton.addEventListener('click', () => {
+    let storageAvailable = true;
+    try {
+      localStorage.setItem(ANALYTICS_PREFERENCE_KEY, 'off');
+    } catch {
+      storageAvailable = false;
+    }
+    analyticsDisabled = true;
+    if (hasAnalyticsId) window[`ga-disable-${GOOGLE_ANALYTICS_ID}`] = true;
+    clearAnalyticsCookies();
+    updateAnalyticsPreferenceStatus(storageAvailable);
+  });
+
+  analyticsOptInButton.addEventListener('click', () => {
+    let storageAvailable = true;
+    try {
+      localStorage.removeItem(ANALYTICS_PREFERENCE_KEY);
+    } catch {
+      storageAvailable = false;
+    }
+    analyticsDisabled = false;
+    loadGoogleAnalytics();
+    updateAnalyticsPreferenceStatus(storageAvailable);
+  });
+
+  updateAnalyticsPreferenceStatus();
+}
+
 // Mobile navigation menu.
 const menuToggle = document.querySelector('.menu-toggle');
 const navigation = document.querySelector('.main-nav');
@@ -181,6 +281,10 @@ if (contactForm) {
       if (!response.ok || !result.success) {
         throw new Error(result.message || 'Submission failed');
       }
+      trackAnalyticsEvent('generate_lead', {
+        form_name: 'contact',
+        interest: contactInterest?.value || 'unspecified'
+      });
       resetContactForm();
       openContactModal();
     } catch (error) {
@@ -333,6 +437,41 @@ const items = {
 items['walnut-dining-table'] = items['cherry-dining-table'];
 items['live-edge-coffee-table'] = items['waterfall-coffee-table'];
 
+const trackItemSelection = (itemId) => {
+  const item = items[itemId];
+  if (!item) return;
+  const pageName = window.location.pathname.split('/').pop().replace('.html', '') || 'home';
+  trackAnalyticsEvent('select_item', {
+    item_list_name: pageName,
+    items: [{
+      item_id: itemId,
+      item_name: item[ITEM.TITLE],
+      item_category: item[ITEM.CATEGORY]
+    }]
+  });
+};
+
+document.addEventListener('click', (event) => {
+  const clickedElement = event.target instanceof Element ? event.target : null;
+  const link = clickedElement?.closest('a[href]');
+  if (!link) return;
+
+  const linkUrl = new URL(link.href, window.location.href);
+  const itemId = linkUrl.pathname.endsWith('/detail.html')
+    ? linkUrl.searchParams.get('item')
+    : null;
+  if (itemId) {
+    trackItemSelection(itemId);
+    return;
+  }
+
+  if (linkUrl.pathname.endsWith('/contact.html')) {
+    trackAnalyticsEvent('contact_click', {
+      link_location: window.location.pathname
+    });
+  }
+});
+
 // Change this list to control which products appear on the landing page.
 // Each entry needs an item ID from the shared items object and an image path.
 const featuredFurniture = [
@@ -368,11 +507,15 @@ document.querySelectorAll('.catalog-card').forEach((card) => {
   card.setAttribute('tabindex', '0');
   card.setAttribute('role', 'link');
   card.addEventListener('click', (event) => {
-    if (!event.target.closest('a')) window.location.href = detailLink.href;
+    if (!event.target.closest('a')) {
+      trackItemSelection(itemId);
+      window.location.href = detailLink.href;
+    }
   });
   card.addEventListener('keydown', (event) => {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
+      trackItemSelection(itemId);
       window.location.href = detailLink.href;
     }
   });

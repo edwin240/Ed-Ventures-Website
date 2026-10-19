@@ -141,6 +141,10 @@ footer { position:relative; display:grid; grid-template-columns:1.5fr 1fr 1.1fr 
 .faq-cta h2 { margin:0 0 12px; font:500 clamp(28px,3.5vw,36px)/1.05 var(--serif); }
 .faq-cta p { margin:0 auto 22px; max-width:460px; color:#5e5a54; font-size:14px; line-height:1.75; }
 .faq-cta .button { margin-top:0; }
+.analytics-controls { display:flex; flex-wrap:wrap; gap:12px; margin:16px 0; }
+.analytics-controls .button { margin-top:0; cursor:pointer; color:var(--black); background:#fff; border-color:#77736e; opacity:1; }
+.analytics-controls .button[aria-pressed="true"] { color:#fff; background:var(--black); border-color:var(--black); }
+.analytics-controls .button:focus-visible { outline:3px solid #a77842; outline-offset:3px; }
 @media (max-width:760px) {
   .faq-shell { padding:48px 6vw 72px; }
   .faq-header { margin-bottom:40px; }

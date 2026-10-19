@@ -1,7 +1,7 @@
 Notes 
     1) To Start localhost: Open up new terminal and paste 
 cd "C:\Users\Edwin Arevalo\Documents\Code GitHub\Simple site"
-py -m http.server 5500
+py -m http.server 8000
 
     2) Manifest image directory AKA .json file && generate thumbnails for full rez images
 cd "C:\Users\Edwin Arevalo\Documents\GitHub Ed Ventures Website"
@@ -33,6 +33,9 @@ py generate-image-manifest.py
 10/13/26
 - sim invoice   
 - 9ft table invoice
-- minor fixes to website
-- van side magnets
+*- minor fixes to website
+*- van side magnets
 - raspberry pi home server
+*- add website tracking to edwinslens.com (alalytics)
+- SEO
+- promote woodworking on FB and CL

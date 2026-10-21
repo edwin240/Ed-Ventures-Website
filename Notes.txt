@@ -35,7 +35,9 @@ py generate-image-manifest.py
 - 9ft table invoice
 *- minor fixes to website
 *- van side magnets
-- raspberry pi home server
+- raspberry pi home server 
+    immich for google photos dupe
+    or Jellyfin, Plex, or Emby: Host your own personal movie, TV show, and music streaming platform to watch your media library on any screen
 *- add website tracking to edwinslens.com (alalytics)
 - SEO
 - promote woodworking on FB and CL

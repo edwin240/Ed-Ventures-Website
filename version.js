@@ -1,3 +1,3 @@
-/** Bump when deploying CSS or JS changes. All pages read this via version.js. */
-const ASSET_VERSION = '10.19.26.7';
+/** Bump for script.js cache invalidation; keep stylesheet URL versions in sync across HTML pages. */
+const ASSET_VERSION = '11.05.26.20';
 const GOOGLE_ANALYTICS_ID = 'G-0P8BPLH56Y';

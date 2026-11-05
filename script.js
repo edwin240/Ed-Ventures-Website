@@ -105,20 +105,45 @@ if (analyticsOptOutButton && analyticsOptInButton && analyticsPreferenceStatus) 
 // Mobile navigation menu.
 const menuToggle = document.querySelector('.menu-toggle');
 const navigation = document.querySelector('.main-nav');
+const mobileNavigationQuery = window.matchMedia('(max-width: 760px)');
+
+const setNavigationOpen = (isOpen) => {
+  navigation.classList.toggle('open', isOpen);
+  document.body.classList.toggle('nav-open', isOpen);
+  menuToggle.setAttribute('aria-expanded', isOpen);
+  menuToggle.setAttribute('aria-label', isOpen ? 'Close navigation' : 'Open navigation');
+  menuToggle.textContent = isOpen ? 'Close' : 'Menu';
+  navigation.setAttribute('aria-hidden', String(mobileNavigationQuery.matches && !isOpen));
+  navigation.querySelectorAll('a').forEach((link) => {
+    link.tabIndex = mobileNavigationQuery.matches && !isOpen ? -1 : 0;
+  });
+};
+
+navigation.setAttribute('aria-hidden', String(mobileNavigationQuery.matches));
+navigation.querySelectorAll('a').forEach((link) => {
+  link.tabIndex = mobileNavigationQuery.matches ? -1 : 0;
+});
 
 menuToggle.addEventListener('click', () => {
-  const isOpen = navigation.classList.toggle('open');
-  menuToggle.setAttribute('aria-expanded', isOpen);
-  menuToggle.textContent = isOpen ? 'Close' : 'Menu';
+  const isOpen = menuToggle.getAttribute('aria-expanded') !== 'true';
+  setNavigationOpen(isOpen);
+  if (isOpen) navigation.querySelector('a:not(.nav-contact)')?.focus();
 });
 
-document.querySelectorAll('.main-nav a').forEach((link) => {
+navigation.querySelectorAll('a').forEach((link) => {
   link.addEventListener('click', () => {
-    navigation.classList.remove('open');
-    menuToggle.setAttribute('aria-expanded', 'false');
-    menuToggle.textContent = 'Menu';
+    setNavigationOpen(false);
   });
 });
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && menuToggle.getAttribute('aria-expanded') === 'true') {
+    setNavigationOpen(false);
+    menuToggle.focus();
+  }
+});
+
+mobileNavigationQuery.addEventListener('change', () => setNavigationOpen(false));
 
 // Reveal sections as they enter the viewport.
 // Wait one paint frame before revealing above-the-fold items so the CSS
@@ -171,6 +196,34 @@ const contactForm = document.querySelector('#contact-form');
 const contactInterest = document.querySelector('#contact-interest');
 const contactVisualImage = document.querySelector('#contact-visual-image');
 const contactVisualCaption = document.querySelector('#contact-visual-caption');
+const itemInquiryModal = document.querySelector('#item-inquiry-modal');
+const itemInquiryClose = itemInquiryModal?.querySelector('.item-inquiry-close');
+const inquiryButton = document.querySelector('.inquiry-button');
+
+const closeItemInquiryModal = () => {
+  if (!itemInquiryModal || itemInquiryModal.hidden) return;
+  itemInquiryModal.hidden = true;
+  itemInquiryModal.setAttribute('aria-hidden', 'true');
+  document.body.classList.remove('item-inquiry-open');
+  inquiryButton?.focus({ preventScroll: true });
+};
+
+const openItemInquiryModal = () => {
+  if (!itemInquiryModal) return;
+  itemInquiryModal.hidden = false;
+  itemInquiryModal.setAttribute('aria-hidden', 'false');
+  document.body.classList.add('item-inquiry-open');
+  itemInquiryModal.querySelector('[name="name"]')?.focus();
+};
+
+inquiryButton?.addEventListener('click', openItemInquiryModal);
+itemInquiryClose?.addEventListener('click', closeItemInquiryModal);
+itemInquiryModal?.addEventListener('click', (event) => {
+  if (event.target === itemInquiryModal) closeItemInquiryModal();
+});
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') closeItemInquiryModal();
+});
 
 if (contactInterest && contactVisualImage && contactVisualCaption) {
   const contactVisuals = {
@@ -286,6 +339,7 @@ if (contactForm) {
         interest: contactInterest?.value || 'unspecified'
       });
       resetContactForm();
+      closeItemInquiryModal();
       openContactModal();
     } catch (error) {
       contactError.hidden = false;
@@ -328,6 +382,35 @@ if (availabilityFilterButtons.length) {
     });
   });
 }
+
+const applyCatalogFilter = (filter) => {
+  if (!filter) return;
+  const filterButton = [...availabilityFilterButtons, ...categoryFilterButtons].find((button) => (
+    button.dataset.availability === filter || button.dataset.filter === filter
+  ));
+  if (filterButton) filterButton.click();
+};
+
+const restoreCatalogPosition = () => {
+  if (!catalogCards.length) return;
+  const historyState = window.history.state;
+  const savedState = historyState && typeof historyState === 'object' ? historyState.catalogReturn : null;
+  const hashState = new URLSearchParams(window.location.hash.slice(1));
+  const hashScrollY = hashState.has('catalog-position') ? Number(hashState.get('catalog-position')) : Number.NaN;
+  const savedScrollY = Number.isFinite(savedState?.scrollY) ? savedState.scrollY : hashScrollY;
+  if (!Number.isFinite(savedScrollY) || savedScrollY < 0) return;
+  applyCatalogFilter(savedState?.filter || hashState.get('catalog-filter'));
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    window.scrollTo(0, savedScrollY);
+    if (savedState) {
+      const nextState = { ...historyState };
+      delete nextState.catalogReturn;
+      window.history.replaceState(nextState, '', window.location.href);
+    }
+  }));
+};
+
+window.addEventListener('pageshow', restoreCatalogPosition);
 
 // Legacy modal behavior for any older catalog cards that still use details-trigger.
 const detailButtons = document.querySelectorAll('.details-trigger');
@@ -495,6 +578,22 @@ if (featuredGrid) {
 }
 
 // Populate catalog cards from items{} and make the whole card clickable.
+const rememberCatalogReturn = (detailLink) => {
+  const activeFilter = document.querySelector('.filter-button.active');
+  const filter = activeFilter?.dataset.availability || activeFilter?.dataset.filter || 'all';
+  const scrollY = Math.round(window.scrollY);
+  const currentState = window.history.state;
+  const nextState = currentState && typeof currentState === 'object' ? { ...currentState } : {};
+  nextState.catalogReturn = { scrollY, filter };
+  window.history.replaceState(nextState, '', window.location.href);
+
+  const detailUrl = new URL(detailLink.href, window.location.href);
+  detailUrl.searchParams.set('returnPage', window.location.pathname);
+  detailUrl.searchParams.set('returnY', String(scrollY));
+  detailUrl.searchParams.set('returnFilter', filter);
+  detailLink.href = detailUrl.href;
+};
+
 document.querySelectorAll('.catalog-card').forEach((card) => {
   const itemId = card.dataset.item || card.querySelector('a[href*="item="]')?.href.split('item=')[1];
   const item = items[itemId];
@@ -509,13 +608,16 @@ document.querySelectorAll('.catalog-card').forEach((card) => {
   card.addEventListener('click', (event) => {
     if (!event.target.closest('a')) {
       trackItemSelection(itemId);
+      rememberCatalogReturn(detailLink);
       window.location.href = detailLink.href;
     }
   });
+  detailLink.addEventListener('click', () => rememberCatalogReturn(detailLink));
   card.addEventListener('keydown', (event) => {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
       trackItemSelection(itemId);
+      rememberCatalogReturn(detailLink);
       window.location.href = detailLink.href;
     }
   });
@@ -600,23 +702,46 @@ if (detailImage) {
   }
   const images = Array.isArray(imageSet) ? imageSet : imageSet.full;
   const thumbnails = Array.isArray(imageSet) ? imageSet : imageSet.thumbs;
-  let currentImage = 0;
   document.title = `${item[ITEM.TITLE]} | Edwin Arevalo`;
   document.querySelector('#detail-kicker').textContent = item[ITEM.CATEGORY];
   document.querySelector('#detail-title').textContent = item[ITEM.TITLE];
   document.querySelector('#detail-price').textContent = displayPrice(item);
   document.querySelector('#detail-description').textContent = item[ITEM.DESCRIPTION];
   document.querySelector('#detail-specs').textContent = item[ITEM.SPECS];
-  document.querySelector('#back-link').href = item[ITEM.CATEGORY] === 'Furniture' ? 'furniture.html' : item[ITEM.CATEGORY] === 'Photography' ? 'photography.html' : 'other-work.html';
+  const backLink = document.querySelector('#back-link');
+  backLink.href = item[ITEM.CATEGORY] === 'Furniture' ? 'furniture.html' : item[ITEM.CATEGORY] === 'Photography' ? 'photography.html' : 'other-work.html';
+  const returnParams = new URLSearchParams(window.location.search);
+  const targetUrl = new URL(backLink.href, window.location.href);
+  const returnPage = returnParams.get('returnPage');
+  const returnY = Number(returnParams.get('returnY'));
+  const returnFilter = returnParams.get('returnFilter');
+  const hasCatalogReturn = returnPage === targetUrl.pathname
+    && returnParams.has('returnY')
+    && Number.isFinite(returnY)
+    && returnY >= 0;
+  if (hasCatalogReturn) {
+    const position = new URLSearchParams({ 'catalog-position': String(returnY) });
+    if (returnFilter) position.set('catalog-filter', returnFilter);
+    targetUrl.hash = position.toString();
+    backLink.href = targetUrl.href;
+  }
+  backLink.addEventListener('click', (event) => {
+    const referrerUrl = new URL(document.referrer || window.location.href);
+    const cameFromCollection = referrerUrl.origin === targetUrl.origin && referrerUrl.pathname === targetUrl.pathname;
+    if (window.history.length > 1 && (hasCatalogReturn || cameFromCollection)) {
+      event.preventDefault();
+      window.history.back();
+    }
+  });
 
   const inquiryButton = document.querySelector('.inquiry-button');
   const detailNote = document.querySelector('.detail-note');
   const galleryMain = document.querySelector('.gallery-main');
+  const zoomCloseButton = document.querySelector('.gallery-zoom-close');
   if (isSold(item)) {
     document.body.classList.add('detail-sold');
     if (inquiryButton) {
       inquiryButton.textContent = 'Request something similar';
-      inquiryButton.href = 'contact.html';
     }
     if (detailNote) {
       detailNote.textContent = 'This piece has sold. We can discuss a similar commission via the contact form.';
@@ -626,6 +751,35 @@ if (detailImage) {
       galleryBadge.className = 'sold-badge sold-badge-gallery';
       galleryBadge.textContent = 'Sold';
       galleryMain.append(galleryBadge);
+    }
+  }
+  if (inquiryButton) {
+    inquiryButton.textContent = isSold(item) ? 'Request something similar' : 'Ask about this';
+  }
+  const inquiryProductImage = document.querySelector('#inquiry-product-image');
+  const inquiryProductTitle = document.querySelector('#inquiry-product-title');
+  const inquiryProductPrice = document.querySelector('#inquiry-product-price');
+  const inquiryProductSpecs = document.querySelector('#inquiry-product-specs');
+  const desiredProduct = document.querySelector('#inquiry-desired-product');
+  const inquiryBudget = document.querySelector('#inquiry-budget');
+  const interestValue = item[ITEM.CATEGORY] === 'Furniture'
+    ? 'furniture'
+    : item[ITEM.CATEGORY] === 'Photography' ? 'photography' : 'other';
+  if (contactInterest) contactInterest.value = interestValue;
+  if (desiredProduct) desiredProduct.value = item[ITEM.TITLE];
+  if (inquiryProductImage) {
+    inquiryProductImage.src = images[0];
+    inquiryProductImage.alt = item[ITEM.TITLE];
+  }
+  if (inquiryProductTitle) inquiryProductTitle.textContent = item[ITEM.TITLE];
+  if (inquiryProductPrice) inquiryProductPrice.textContent = displayPrice(item);
+  if (inquiryProductSpecs) inquiryProductSpecs.textContent = item[ITEM.SPECS];
+  if (inquiryBudget) {
+    const priceValue = Number(String(item[ITEM.PRICE]).replace(/[^\d.]/g, ''));
+    if (Number.isFinite(priceValue) && priceValue > 0) {
+      inquiryBudget.value = priceValue < 1000
+        ? 'under-1000'
+        : priceValue < 3000 ? '1000-3000' : priceValue < 5000 ? '3000-5000' : '5000-plus';
     }
   }
   const imageElement = document.querySelector('#detail-image');
@@ -642,12 +796,51 @@ if (detailImage) {
   // the rest defer until the browser decides they are near the viewport.
   const EAGER_THUMBS = 8;
 
+  const setSlideOrientation = (slide) => {
+    if (!slide.naturalWidth || !slide.naturalHeight) return;
+    slide.classList.toggle('is-landscape', slide.naturalWidth > slide.naturalHeight);
+  };
+
+  let currentImage = 0;
+  let zoomScale = 1;
+  let panX = 0;
+  let panY = 0;
+  let isZoomed = false;
+  const applyZoom = () => {
+    const slide = slideElements[currentImage];
+    const maxPanX = slide.offsetWidth * (zoomScale - 1) / 2;
+    const maxPanY = slide.offsetHeight * (zoomScale - 1) / 2;
+    panX = Math.max(-maxPanX, Math.min(maxPanX, panX));
+    panY = Math.max(-maxPanY, Math.min(maxPanY, panY));
+    slide.style.transform = `translate3d(${panX}px, ${panY}px, 0) scale(${zoomScale})`;
+    isZoomed = zoomScale > 1;
+    galleryMain.classList.toggle('is-zoomed', isZoomed);
+  };
+  const resetZoom = () => {
+    zoomScale = 1;
+    panX = 0;
+    panY = 0;
+    isZoomed = false;
+    galleryMain.classList.remove('is-zoomed');
+    slideElements.forEach((slide) => { slide.style.transform = ''; });
+  };
+  const syncGalleryHeight = () => {
+    const activeSlide = slideElements[currentImage];
+    if (activeSlide?.naturalHeight) {
+      galleryMain.style.height = `${activeSlide.getBoundingClientRect().height}px`;
+    }
+  };
+
   // Create one <img> per slide in the track. Reuse #detail-image for index 0.
   const slideElements = images.map((image, index) => {
     const slide = index === 0 ? imageElement : document.createElement('img');
     slide.className = 'gallery-slide';
     slide.dataset.src = image;
     slide.alt = `${item[ITEM.TITLE]} image ${index + 1}`;
+    slide.addEventListener('load', () => {
+      setSlideOrientation(slide);
+      if (slide === slideElements[currentImage]) syncGalleryHeight();
+    });
     if (index > 0) galleryTrack.appendChild(slide);
     return slide;
   });
@@ -657,6 +850,10 @@ if (detailImage) {
     const slide = slideElements[index];
     if (!slide.dataset.src || slide.getAttribute('src')) return;
     slide.src = slide.dataset.src;
+    if (slide.complete) {
+      setSlideOrientation(slide);
+      if (slide === slideElements[currentImage]) syncGalleryHeight();
+    }
   };
 
   // Remove src to free memory; skip the slide currently on screen.
@@ -664,7 +861,7 @@ if (detailImage) {
     if (index === currentImage) return;
     const slide = slideElements[index];
     slide.removeAttribute('src');
-    slide.classList.remove('is-landscape', 'is-portrait');
+    slide.classList.remove('is-landscape');
   };
 
   // Keep only slides within LOAD_WINDOW of the current index mounted.
@@ -673,16 +870,6 @@ if (detailImage) {
       if (Math.abs(index - currentImage) <= LOAD_WINDOW) mountSlide(index);
       else unmountSlide(index);
     });
-  };
-
-  // Mobile CSS uses is-landscape / is-portrait to pick 5:4 vs 4:5 aspect ratio.
-  const syncImageOrientation = () => {
-    const activeImage = slideElements[currentImage];
-    const { naturalWidth, naturalHeight } = activeImage;
-    if (!naturalWidth || !naturalHeight) return;
-    const isLandscape = naturalWidth >= naturalHeight;
-    activeImage.classList.toggle('is-landscape', isLandscape);
-    activeImage.classList.toggle('is-portrait', !isLandscape);
   };
 
   // Scroll the thumb strip only when the active thumb is off-screen.
@@ -700,14 +887,14 @@ if (detailImage) {
 
   // Switch to a slide by index; wraps around at the ends.
   const showImage = (index, animate = true) => {
+    resetZoom();
     currentImage = (index + images.length) % images.length;
     syncMountedSlides();
-    slideElements[currentImage].onload = syncImageOrientation;
+    syncGalleryHeight();
     countElement.textContent = `${currentImage + 1} / ${images.length}`;
     thumbsElement.querySelectorAll('button').forEach((thumb, thumbIndex) => thumb.classList.toggle('active', thumbIndex === currentImage));
     updateGalleryPosition(animate);
     scrollActiveThumbIntoView();
-    if (slideElements[currentImage].complete) syncImageOrientation();
   };
 
   // Build the clickable thumbnail strip below the main image.
@@ -732,23 +919,93 @@ if (detailImage) {
   let swipeStartY = 0;
   let swipeDeltaX = 0;
   let isDragging = false;
+  let dragMode = 'swipe';
+  const activeTouchPointers = new Set();
+  const touchPointerPositions = new Map();
+  let pinchStartDistance = 0;
+  let pinchStartScale = 1;
+  let pinchPreviousCenter = { x: 0, y: 0 };
+  let dragStartPan = { x: 0, y: 0 };
+
+  const distanceBetweenTouches = () => {
+    const [first, second] = [...touchPointerPositions.values()];
+    return Math.hypot(second.x - first.x, second.y - first.y);
+  };
+
+  zoomCloseButton.setAttribute('aria-label', 'Reset image zoom');
+  zoomCloseButton.addEventListener('click', resetZoom);
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && isZoomed) resetZoom();
+  });
+
+  galleryMain.addEventListener('wheel', (event) => {
+    if (!event.ctrlKey) return;
+    event.preventDefault();
+    zoomScale = Math.max(1, Math.min(3, zoomScale + (event.deltaY < 0 ? 0.15 : -0.15)));
+    if (zoomScale <= 1.05) resetZoom();
+    else applyZoom();
+  }, { passive: false });
 
   galleryMain.addEventListener('pointerdown', (event) => {
-    if (!event.isPrimary || event.target.closest('button')) return;
+    if (event.target.closest('button')) return;
+    if (event.pointerType === 'touch') {
+      activeTouchPointers.add(event.pointerId);
+      touchPointerPositions.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      if (activeTouchPointers.size > 1) {
+        isDragging = false;
+        dragMode = 'pinch';
+        pinchStartDistance = distanceBetweenTouches();
+        pinchStartScale = zoomScale;
+        const [first, second] = [...touchPointerPositions.values()];
+        pinchPreviousCenter = { x: (first.x + second.x) / 2, y: (first.y + second.y) / 2 };
+        return;
+      }
+    }
+    if (!event.isPrimary) return;
     swipeStartX = event.clientX;
     swipeStartY = event.clientY;
     swipeDeltaX = 0;
     isDragging = true;
-    try {
-      galleryMain.setPointerCapture(event.pointerId);
-    } catch (error) {
-      // Some synthetic events do not have an active pointer to capture.
+    dragMode = isZoomed ? 'pan' : 'swipe';
+    dragStartPan = { x: panX, y: panY };
+    if (event.pointerType !== 'touch') {
+      try {
+        galleryMain.setPointerCapture(event.pointerId);
+      } catch (error) {
+        // Some synthetic events do not have an active pointer to capture.
+      }
     }
     galleryTrack.style.transition = 'none';
   });
 
   galleryMain.addEventListener('pointermove', (event) => {
-    if (!isDragging) return;
+    if (event.pointerType === 'touch' && touchPointerPositions.has(event.pointerId)) {
+      touchPointerPositions.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      if (touchPointerPositions.size > 1) {
+        const distance = distanceBetweenTouches();
+        const [first, second] = [...touchPointerPositions.values()];
+        const center = { x: (first.x + second.x) / 2, y: (first.y + second.y) / 2 };
+        panX += center.x - pinchPreviousCenter.x;
+        panY += center.y - pinchPreviousCenter.y;
+        pinchPreviousCenter = center;
+        zoomScale = Math.max(1, Math.min(3, pinchStartScale * distance / pinchStartDistance));
+        if (zoomScale <= 1.05) {
+          resetZoom();
+        } else {
+          applyZoom();
+        }
+        dragMode = 'pinch';
+        return;
+      }
+    }
+    if (!isDragging || activeTouchPointers.size > 1) return;
+    if (dragMode === 'pan') {
+      event.preventDefault();
+      panX = dragStartPan.x + event.clientX - swipeStartX;
+      panY = dragStartPan.y + event.clientY - swipeStartY;
+      applyZoom();
+      return;
+    }
     const deltaY = event.clientY - swipeStartY;
     swipeDeltaX = event.clientX - swipeStartX;
     // Ignore the gesture if the user is scrolling vertically instead.
@@ -760,9 +1017,27 @@ if (detailImage) {
   });
 
   const finishSwipe = (event) => {
+    if (event.pointerType === 'touch') {
+      activeTouchPointers.delete(event.pointerId);
+      touchPointerPositions.delete(event.pointerId);
+    }
+    if (event.pointerType === 'touch' && activeTouchPointers.size === 1 && isZoomed) {
+      const [remainingPosition] = touchPointerPositions.values();
+      isDragging = true;
+      dragMode = 'pan';
+      swipeStartX = remainingPosition.x;
+      swipeStartY = remainingPosition.y;
+      dragStartPan = { x: panX, y: panY };
+      return;
+    }
     if (!isDragging) return;
     isDragging = false;
+    if (dragMode !== 'swipe') return;
     if (galleryMain.hasPointerCapture(event.pointerId)) galleryMain.releasePointerCapture(event.pointerId);
+    if (event.type === 'pointercancel') {
+      showImage(currentImage);
+      return;
+    }
     // Small movement = stay on current slide; large movement = skip one or more.
     const skippedImages = Math.abs(swipeDeltaX) < 45 ? 0 : Math.max(1, Math.round(Math.abs(swipeDeltaX) / galleryMain.clientWidth));
     showImage(currentImage + (swipeDeltaX < 0 ? skippedImages : -skippedImages));

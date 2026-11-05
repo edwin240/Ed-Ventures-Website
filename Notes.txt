@@ -1,7 +1,7 @@
 Notes 
     1) To Start localhost: Open up new terminal and paste 
 cd "C:\Users\Edwin Arevalo\Documents\Code GitHub\Simple site"
-py -m http.server 8000
+py -m http.server 5500
 
     2) Manifest image directory AKA .json file && generate thumbnails for full rez images
 cd "C:\Users\Edwin Arevalo\Documents\GitHub Ed Ventures Website"
@@ -35,9 +35,14 @@ py generate-image-manifest.py
 - 9ft table invoice
 *- minor fixes to website
 *- van side magnets
-- raspberry pi home server 
-    immich for google photos dupe
-    or Jellyfin, Plex, or Emby: Host your own personal movie, TV show, and music streaming platform to watch your media library on any screen
-*- add website tracking to edwinslens.com (alalytics)
-- SEO
-- promote woodworking on FB and CL
+- raspberry pi home server
+- finish Sim Video
+
+
+-make landing page buttons more noticeable
+-reduce/remove hero images on catalog pages
+-make it more obvious that you can click items on the catalog pages to view more on them
+-make pinch zooming better on detail pages
+-make photos take up more of the page
+-landing page quote button
+All complete 11/5/26
